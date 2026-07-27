@@ -2,15 +2,17 @@ import os
 import re
 import yaml
 import lineinfile
-from typing import List
+from typing import List, Optional
 
 from smashremix_extra.logger import logger
+from smashremix_extra.content_filter import filter_folders
 
 
 class AudioProcessor:
     """Processes extra_music/ and accumulates MIDI/BGM patch data."""
 
-    def __init__(self):
+    def __init__(self, music_selection: Optional[list] = None):
+        self.music_selection = music_selection
         self.midi_series_list: List[str] = []
         self.midi_files_list: List[str] = []
         self.midi_priority_overrides: List[str] = []
@@ -35,7 +37,15 @@ class AudioProcessor:
                     num_menu_track = int(m.group(1)) - 4
                     break
 
-        for _dir in os.listdir("extra_music"):
+        music_dirs = [
+            d for d in sorted(os.listdir("extra_music"))
+            if os.path.isdir(os.path.join("extra_music", d)) and not d.startswith("_")
+        ]
+        music_dirs = filter_folders(
+            music_dirs, self.music_selection, kind="music"
+        )
+
+        for _dir in music_dirs:
             try:
                 config = yaml.safe_load(open(
                     f"extra_music/{_dir}/config.yaml", 'r', encoding='utf-8'
@@ -134,7 +144,11 @@ class AudioProcessor:
         char_volume_overrides: List[str],
     ) -> None:
         """Patch midi.asm: MIDI_BANK address, game series, tracks, and overrides."""
-        midi_bank_addr = original_size + int("0x400000", 16)
+        # ASM lives between original_extra and MIDI_BANK. Remix reserved 4MB;
+        # measured custom_heap is ~1.8MB for this roster, so 2.5MB is enough
+        # headroom and recovers ~1.5MB toward the 64MB iOS limit.
+        asm_headroom = int("0x280000", 16)  # 2.5 MB
+        midi_bank_addr = original_size + asm_headroom
         lineinfile.add_line_to_file(
             filepath="src/midi.asm",
             line=f'\tconstant MIDI_BANK(0x{midi_bank_addr:07X})',

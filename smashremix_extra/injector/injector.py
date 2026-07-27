@@ -3,7 +3,7 @@ from typing import Callable, Optional
 
 from SSB import N64, NALEnum, ReplaceData, SSBtbl, FinishROM, process
 from .vpk0 import compress as vpk0_compress
-from .file_appender import pad_rom_file
+from .file_appender import pad_to_alignment
 
 
 # ---------------------------------------------------------------------------
@@ -166,11 +166,13 @@ class ROMInjector:
             for ptr in NALEnum:
                 process(self.n64, ptr, count_delta)
 
-        FinishROM(self.n64, pad=True)
+        # Truncate to used data only. Do NOT pad to 4MB — that forces the ASM
+        # origin up a full bank and blows past the 64MB iOS/emulator limit.
+        FinishROM(self.n64, pad=False)
 
-        # Pad ROM to 4096-byte alignment (matching SSBFileInjector.exe behavior)
+        # Pad to 64KB so Boot.asm can load the ASM bank with a bare `lui a0, HI`.
         rom_data = bytes(self.n64.rom)
-        rom_data = pad_rom_file(rom_data)
+        rom_data = pad_to_alignment(rom_data, 0x10000, pad_byte=0xFF)
 
         os.makedirs(os.path.dirname(
             os.path.abspath(self._output_rom)), exist_ok=True)
@@ -178,5 +180,8 @@ class ROMInjector:
             f.write(rom_data)
 
         if on_progress:
-            on_progress(f"Done - wrote {self._output_rom}")
-        print(f"ROM written -> {self._output_rom}")
+            on_progress(
+                f"Done - wrote {self._output_rom} "
+                f"({len(rom_data)} bytes / {len(rom_data) / (1024 * 1024):.3f} MB)"
+            )
+        print(f"ROM written -> {self._output_rom} ({len(rom_data)} bytes)")

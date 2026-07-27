@@ -1,0 +1,18 @@
+# Content selection for size-constrained builds (iOS ≤64 MB target).
+# Omit a key (or set to null) to include everything in that category.
+# Empty list [] includes nothing.
+# Folders starting with "_" are always skipped.
+
+characters:
+  - Cloud
+  - Kazuya
+  - Ken
+  - MetaKnight
+  - Ryu
+  - Terry
+  - YZelda
+
+# EXTRA stages omitted for size headroom.
+stages: []
+
+# music: null    # all music packs

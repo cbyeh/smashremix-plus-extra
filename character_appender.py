@@ -18,6 +18,7 @@ from smashremix_extra.character.processor import CharacterProcessor
 from smashremix_extra.stage.processor import StageProcessor
 from smashremix_extra.audio.processor import AudioProcessor
 from smashremix_extra.injector import ROMInjector, MODIFIED_FILES
+from smashremix_extra.content_filter import filter_folders, load_content_config
 
 
 class CharacterAppender:
@@ -51,9 +52,14 @@ class CharacterAppender:
         )
         self.name_texture_default = f"0x{name_texture_offset:08X} + 0x10"
 
+        content_cfg = load_content_config()
+
         self.char_folders = [cf for cf in os.listdir("extra_characters") if os.path.isdir(
             os.path.join("extra_characters", cf)) and not cf.startswith("_")]
         self.char_folders.sort()
+        self.char_folders = filter_folders(
+            self.char_folders, content_cfg.get("characters"), kind="characters"
+        )
 
         if args.single_character:
             self.char_folders = [args.single_character]
@@ -61,6 +67,9 @@ class CharacterAppender:
         self.stage_folders = os.listdir("extra_stages")
         self.stage_folders = [
             sf for sf in self.stage_folders if not sf.startswith("_")]
+        self.stage_folders = filter_folders(
+            self.stage_folders, content_cfg.get("stages"), kind="stages"
+        )
 
         # Check for stage variants
         self.stage_variants = []
@@ -80,7 +89,9 @@ class CharacterAppender:
         print(f"Extra characters: {len(self.char_folders)}")
         print(f"Extra stages: {len(self.stage_folders)}")
 
-        self.audio_proc = AudioProcessor()
+        self.audio_proc = AudioProcessor(
+            music_selection=content_cfg.get("music")
+        )
 
         last_sfx_id = 694  # Last vanilla SFX ID
 
@@ -129,13 +140,19 @@ class CharacterAppender:
         self.stage_proc.process(stage_folder)
 
     def inject_files_in_rom(self):
-        if not self.char_folders:
+        output_rom = os.path.join(smashremix_path, "roms/original_extra.z64")
+        input_rom = os.path.join(smashremix_path, "roms/original.z64")
+
+        has_imports = bool(file_manager.FileManager.get_import_files())
+        # Always rebuild original_extra so size/origin stay in sync with content.
+        if not self.char_folders and not self.stage_folders and not has_imports:
+            shutil.copy(input_rom, output_rom)
+            print(f"No EXTRA files to inject — copied {input_rom} -> {output_rom}")
             return
 
         injector = ROMInjector(
-            input_rom=os.path.join(smashremix_path, "roms/original.z64"),
-            output_rom=os.path.join(
-                smashremix_path, "roms/original_extra.z64"),
+            input_rom=input_rom,
+            output_rom=output_rom,
         )
 
         for file_id, path, tbl_off, res_off, level in MODIFIED_FILES:
