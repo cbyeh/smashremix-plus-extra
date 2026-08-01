@@ -23,9 +23,15 @@ from smashremix_extra.content_filter import filter_folders, load_content_config
 
 class CharacterAppender:
     def __init__(self, args):
-        if not os.path.exists(smashremix_path):
-            print(
-                f"ERROR: The path {smashremix_path} does not exist. Initialize submodules.")
+        if not os.path.exists(os.path.join(smashremix_path, "src/File.asm")):
+            print("\n"
+                f"ERROR: Smash Remix source code not found in '{smashremix_path}' folder. "
+                f"Initialize submodules (Git) or download source manually.")
+            sys.exit(1)
+
+        if not os.path.exists(os.path.join(smashremix_path, "roms/ssb.rom")):
+            print("\n"
+                "ERROR: Vanilla SSB64 USA ROM titled 'ssb.rom' not in 'smashremix/roms' folder!")
             sys.exit(1)
 
         if not os.path.exists(os.path.join(smashremix_path, "roms/original.z64")):
