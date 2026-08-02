@@ -182,6 +182,6 @@ class ROMInjector:
         if on_progress:
             on_progress(
                 f"Done - wrote {self._output_rom} "
-                f"({len(rom_data)} bytes / {len(rom_data) / (1024 * 1024):.3f} MB)"
+                f"({len(rom_data)} bytes / {len(rom_data) / (1024 * 1024):.3f} MiB)"
             )
         print(f"ROM written -> {self._output_rom} ({len(rom_data)} bytes)")

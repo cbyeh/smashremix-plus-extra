@@ -5,6 +5,7 @@ import shutil
 import yaml
 import re
 import argparse
+import hashlib
 from pathlib import Path
 
 from smashremix_extra.image_appender import append_image, get_image_data, ImageMode
@@ -16,9 +17,17 @@ from smashremix_extra.logger import logger
 from smashremix_extra import file_manager
 from smashremix_extra.character.processor import CharacterProcessor
 from smashremix_extra.stage.processor import StageProcessor
-from smashremix_extra.audio.processor import AudioProcessor
+from smashremix_extra.audio.processor import AudioProcessor, ASM_HEADROOM
 from smashremix_extra.injector import ROMInjector, MODIFIED_FILES
+from smashremix_extra.injector.file_appender import pad_to_alignment
 from smashremix_extra.content_filter import filter_folders, load_content_config
+
+# original_extra.z64 must stay 64KB-aligned so Boot.asm can address the ASM
+# bank with a bare `lui a0, HI`. Keep in sync with ROMInjector.save().
+ROM_ALIGNMENT = 0x10000
+
+# Most flash carts and iOS emulators refuse ROMs at or above 64 MiB.
+ROM_SIZE_LIMIT = 64 * 1024 * 1024
 
 
 class CharacterAppender:
@@ -152,7 +161,12 @@ class CharacterAppender:
         has_imports = bool(file_manager.FileManager.get_import_files())
         # Always rebuild original_extra so size/origin stay in sync with content.
         if not self.char_folders and not self.stage_folders and not has_imports:
-            shutil.copy(input_rom, output_rom)
+            # Pad here too: Boot.asm's `lui a0` can only encode the high 16 bits
+            # of this file's size, so it must stay 64KB-aligned on every path.
+            with open(input_rom, "rb") as f:
+                rom_data = pad_to_alignment(f.read(), ROM_ALIGNMENT, pad_byte=0xFF)
+            with open(output_rom, "wb") as f:
+                f.write(rom_data)
             print(f"No EXTRA files to inject — copied {input_rom} -> {output_rom}")
             return
 
@@ -210,11 +224,87 @@ class CharacterAppender:
     def edit_src_files(self):
         original_size = os.path.getsize(os.path.join(
             smashremix_path, "roms/original_extra.z64"))
+
+        # Boot.asm loads the ASM bank's ROM address with a bare `lui a0, HI`,
+        # which can only encode the high 16 bits. If original_extra is not
+        # 64KB-aligned the low bits are silently dropped and the boot DMA reads
+        # from the wrong offset, yielding a ROM that boots into garbage.
+        if original_size % ROM_ALIGNMENT != 0:
+            print(
+                f"ERROR: original_extra.z64 is {original_size} bytes, which is not "
+                f"a multiple of 0x{ROM_ALIGNMENT:X} ({ROM_ALIGNMENT}).\n"
+                f"       Boot.asm's `lui a0` would drop the low "
+                f"0x{original_size % ROM_ALIGNMENT:X} bytes of the address."
+            )
+            sys.exit(1)
+
+        # The final ROM is produced later by bass (patch_extra.bat), but its
+        # floor is already known here: data + ASM region + the MIDI bank. Warn
+        # now rather than after a multi-minute assemble.
+        projected = original_size + ASM_HEADROOM
+        print(
+            f"ROM layout: data={original_size / (1024 * 1024):.3f} MiB + "
+            f"ASM region={ASM_HEADROOM / (1024 * 1024):.3f} MiB "
+            f"-> MIDI_BANK at {projected / (1024 * 1024):.3f} MiB"
+        )
+        if projected >= ROM_SIZE_LIMIT:
+            print(
+                f"ERROR: MIDI_BANK would start at {projected} bytes, at or past the "
+                f"{ROM_SIZE_LIMIT / (1024 * 1024):.0f} MiB limit before any MIDI data.\n"
+                f"       Remove content via extra_content.yaml."
+            )
+            sys.exit(1)
+
         self._patch_src_paths(original_size)
         self._patch_audio_asm(original_size)
         self._patch_character_asm()
         self._patch_stage_asm()
         self._patch_toggle_asm()
+        self._patch_sram_revision()
+
+    def _patch_sram_revision(self):
+        """
+        Derive SRAM.REVISION from the built content selection.
+
+        src/SRAM.asm says REVISION must be incremented whenever a stage, a MIDI,
+        or a toggle is added, or the toggle order changes. This build does all of
+        those: menu-music toggles are appended and Toggles.asm's MAX_VALUE is
+        rewritten, which resizes block_music and therefore SHIFTS the SRAM
+        offsets of every block after it (block_stages, block_pokemon,
+        block_tags -- see the SRAM.block chain in src/Toggles.asm).
+
+        REVISION is what tells check_saved_() to distrust an old save. Leaving it
+        at Remix's stock value means a save written by a different content
+        selection is treated as valid, and the game reads toggle/tag data from
+        offsets that have moved -- garbage that can crash on boot. That matches
+        the observed symptom: fresh save works, second launch crashes.
+
+        Hashing the selection (rather than incrementing) means any change to the
+        roster, stages, or music automatically invalidates stale saves, and the
+        same selection keeps a stable revision so saves survive rebuilds.
+        """
+        selection = repr([
+            sorted(self.char_folders),
+            sorted(self.stage_folders),
+            sorted(self.audio_proc.midi_files_list),
+        ]).encode("utf-8")
+
+        # REVISION is read with `lli`, a 16-bit immediate, so it must fit in
+        # 0x0000-0xFFFF. Stay clear of stock values to avoid colliding with a
+        # save written by upstream Remix.
+        revision = 0x1000 + (int(hashlib.sha256(selection).hexdigest(), 16) % 0xF000)
+
+        print(
+            f"SRAM revision: 0x{revision:04X} "
+            f"({len(self.char_folders)} characters, {len(self.stage_folders)} stages, "
+            f"{len(self.audio_proc.midi_files_list)} extra MIDIs)"
+        )
+
+        lineinfile.add_line_to_file(
+            filepath="src/SRAM.asm",
+            line=f'    constant REVISION(0x{revision:04X})',
+            regexp=r'.*constant REVISION\(.*\)'
+        )
 
     def _patch_src_paths(self, original_size):
         # main.asm
@@ -275,6 +365,24 @@ class CharacterAppender:
             line="fill 0x800",
             regexp=r'fill .*',
             inserter=lineinfile.AfterLast(r"file_table:.*\n")
+        )
+
+        # Fail the assembly if the ASM region (code + midi_memory_block +
+        # file_table + custom_heap) grows past MIDI_BANK. Only bass knows where
+        # custom_heap actually lands, so this has to be checked at assemble time
+        # rather than from Python. Without it, an overflow silently overwrites
+        # the MIDI bank and starves the runtime heap.
+        lineinfile.add_line_to_file(
+            filepath="main.asm",
+            line=(
+                "\n// +EXTRA: guard against the ASM region colliding with MIDI_BANK\n"
+                "if custom_heap > (0x80400000 + MIDI.MIDI_BANK - "
+                f"0x{original_size:08X}) {{\n"
+                '    error "ASM region overflows MIDI_BANK: reduce content or '
+                'raise ASM_HEADROOM in smashremix_extra/audio/processor.py"\n'
+                "}"
+            ),
+            inserter=lineinfile.AfterLast(r"custom_heap:.*\n")
         )
 
         # Boot.asm

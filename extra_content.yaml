@@ -3,16 +3,51 @@
 # Empty list [] includes nothing.
 # Folders starting with "_" are always skipped.
 
+# NOTE ON SIZE BUDGET
+# The region between original_extra.z64 and MIDI_BANK (ASM_HEADROOM in
+# smashremix_extra/audio/processor.py) must stay at Remix's stock 4MB -- its
+# tail is the runtime heap, and shrinking it caused intermittent
+# "ALLOC OVERFLOW" crashes. Pay for ROM size here instead.
+#
+# Characters are the only large lever. The MIDI region (~14.8 MB) is Remix's
+# own music and is not configurable from this file.
+#
+# Do NOT size a character by `du` on its folder: assets are vpk0-compressed and
+# some files never ship, so real ROM cost is roughly 0.78x the folder size.
+# Measured: Ken was 1.050 MB on disk but 0.821 MB in the ROM. At that ratio the
+# characters below cost roughly:
+#   Kazuya 0.56  MetaKnight 0.75  Ryu 0.76  Cloud 0.88  YZelda 0.93  Terry 1.06
+# All 17 music packs together are only ~0.3 MB, so cutting music buys little.
+
 characters:
   - Cloud
   - Kazuya
-  - Ken
   - MetaKnight
   - Ryu
-  - Terry
   - YZelda
+  # Ken and Terry removed to fund restoring ASM_HEADROOM to 4MB.
+  # Ken alone left the ROM 12,496 bytes over the 64 MiB limit; dropping Terry
+  # buys ~1.06 MB of real margin.
+  # Swap entries above if you would rather keep a different roster.
+  #
+  # Terry owns FGC.asm (the `scope FGC` shared-mechanics file). Nothing outside
+  # extra_characters/Terry/ references that scope, and its many Kazuya blocks
+  # are all inside `if {defined Character.CHARACTER_ADDED_KAZUYA}` guards, so
+  # removing Terry does not affect Kazuya. If you re-add Terry, keep FGC.asm.
 
 # EXTRA stages omitted for size headroom.
 stages: []
 
-# music: null    # all music packs
+# All EXTRA music removed (~0.301 MB, 28 tracks across 17 packs).
+#
+# These tracks are not referenced by anything built here: with `stages: []` no
+# stage assigns them as BGM, so their only remaining use is padding the
+# random/toggle BGM pool in the music menu (2 of the 28 also work as menu
+# music). Not worth the ROM space for this build.
+#
+# Set to `null` to restore all of them, or list pack names to restore some.
+#
+# CAUTION: if you re-enable any stage above, restore the music packs its
+# config.yaml references (extra_stages/<Stage>/config.yaml -> music:) or the
+# stage will point at track IDs that no longer exist.
+music: []

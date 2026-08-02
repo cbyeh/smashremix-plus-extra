@@ -7,6 +7,12 @@ from typing import List, Optional
 from smashremix_extra.logger import logger
 from smashremix_extra.content_filter import filter_folders
 
+# Size of the region reserved between original_extra.z64 and MIDI_BANK for the
+# custom ASM, midi_memory_block, file_table, and the relocated runtime heap.
+# This matches Remix's stock reservation; see patch_midi_asm() for why it must
+# not be trimmed.
+ASM_HEADROOM = 0x400000  # 4 MB
+
 
 class AudioProcessor:
     """Processes extra_music/ and accumulates MIDI/BGM patch data."""
@@ -144,10 +150,18 @@ class AudioProcessor:
         char_volume_overrides: List[str],
     ) -> None:
         """Patch midi.asm: MIDI_BANK address, game series, tracks, and overrides."""
-        # ASM lives between original_extra and MIDI_BANK. Remix reserved 4MB;
-        # measured custom_heap is ~1.8MB for this roster, so 2.5MB is enough
-        # headroom and recovers ~1.5MB toward the 64MB iOS limit.
-        asm_headroom = int("0x280000", 16)  # 2.5 MB
+        # The region between original_extra and MIDI_BANK holds the custom ASM,
+        # midi_memory_block, file_table, and finally custom_heap (see
+        # smashremix/main.asm). custom_heap is the LAST label, and the runtime
+        # heap grows into whatever space is left above it -- Boot.asm derives the
+        # boot DMA size from ((custom_heap - 0x80400000) >> 16) + 1.
+        #
+        # So this value is not spare padding: its tail IS the runtime heap.
+        # Shrinking it to 0x280000 (2.5MB) recovered ROM space but starved the
+        # heap, producing intermittent "ALLOC OVERFLOW" crashes. Keep Remix's
+        # stock 4MB and pay for ROM size by trimming content instead
+        # (see extra_content.yaml).
+        asm_headroom = ASM_HEADROOM
         midi_bank_addr = original_size + asm_headroom
         lineinfile.add_line_to_file(
             filepath="src/midi.asm",
