@@ -11,6 +11,7 @@ from .file_appender import pad_to_alignment
 # (file_id, local_path, tbl_offset, res_offset, compression_level)
 # ---------------------------------------------------------------------------
 MODIFIED_FILES = [
+    (0x000B, "scripts/000B.bin",  0x01EF8, 0x3FFFC, 2), # 1P icons
     (0x000C, "scripts/000C.bin",  0x00130, 0x3FFFC, 2), # 1P nameplates
     (0x0011, "scripts/0011.bin",  0x00038, 0x3FFFC, 2), # CSS nameplates
     (0x0014, "scripts/0014.bin",  0x00610, 0x3FFFC, 2), # 2D series logos (CSS, SSS)

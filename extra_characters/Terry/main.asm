@@ -1,5 +1,4 @@
 include "./TerrySpecial.asm"
-// include "./FGC.asm"
 
 // This file contains file inclusions, action edits, and assembly for Terry.
 
@@ -79,8 +78,8 @@ scope Terry {
     Character.edit_action_parameters(TERRY, Action.JumpB, File.TERRY_ANIM_JUMPB, jump, -1);
     Character.edit_action_parameters(TERRY, Action.JumpAerialF, File.TERRY_ANIM_JUMPAERIALF, jumpAerial, -1);
     Character.edit_action_parameters(TERRY, Action.JumpAerialB, File.TERRY_ANIM_JUMPAERIALB, jumpAerial, -1);
-    Character.edit_action_parameters(TERRY, Action.Fall, File.TERRY_ANIM_FALL, -1, -1);
-    Character.edit_action_parameters(TERRY, Action.FallAerial, File.TERRY_ANIM_FALLAERIAL, -1, -1);
+    Character.edit_action_parameters(TERRY, Action.Fall, File.TERRY_ANIM_FALL, fall, -1);
+    Character.edit_action_parameters(TERRY, Action.FallAerial, File.TERRY_ANIM_FALLAERIAL, fall, -1);
     Character.edit_action_parameters(TERRY, Action.Crouch, File.TERRY_ANIM_CROUCH, -1, -1);
     Character.edit_action_parameters(TERRY, Action.CrouchIdle, File.TERRY_ANIM_CROUCHIDLE, -1, -1);
     Character.edit_action_parameters(TERRY, Action.CrouchEnd, File.TERRY_ANIM_CROUCHEND, -1, -1);
@@ -363,6 +362,7 @@ scope Terry {
     Character.table_patch_start(air_usp, Character.id.TERRY, 0x4)
     dw TerrySpecial.USP.air_initial_
     OS.patch_end()
+
     Character.table_patch_start(ground_usp, Character.id.TERRY, 0x4)
     dw TerrySpecial.USP.ground_initial_
     OS.patch_end()
@@ -383,6 +383,7 @@ scope Terry {
         j Character.grounded_script.DISABLED // back to original routine
         sw r0, 0xADC(v0) // set nsp special bool to FALSE
     }
+
     Character.table_patch_start(grounded_script, Character.id.TERRY, 0x4)
     dw grounded_script_
     OS.patch_end()
@@ -391,6 +392,7 @@ scope Terry {
         j 0x800D7F0C // back to original routine
         sw r0, 0xADC(v1) // set nsp special bool to FALSE
     }
+
     Character.table_patch_start(initial_script, Character.id.TERRY, 0x4)
     dw initial_script_
     OS.patch_end()
@@ -424,24 +426,27 @@ scope Terry {
         string_0x0EC:; String.insert("ec")
         string_0x0ED:; String.insert("ed")
         string_0x0EE:; String.insert("ee")
-        string_0x0F1:; String.insert("RisingTackleLight")
-        string_0x0F2:; String.insert("RisingTackleStrong")
-        string_0x0F3:; String.insert("BurningKnuckleLight")
-        string_0x0F4:; String.insert("BurningKnuckleStrong")
-        string_0x0F5:; String.insert("BurningKnuckleEnd")
-        string_0x0F6:; String.insert("BurningKnuckleAirEnd")
-        string_0x0F7:; String.insert("PowerDunkRiseLight")
-        string_0x0F8:; String.insert("PowerDunkRiseStrong")
-        string_0x0F9:; String.insert("PowerDunkFallLight")
-        string_0x0FA:; String.insert("PowerDunkFallStrong")
-        string_0x0FB:; String.insert("PowerDunkLand")
-        string_0x0FC:; String.insert("PowerWaveLight")
-        string_0x0FD:; String.insert("PowerWaveStrong")
-        string_0x0FE:; String.insert("CrackShootStart")
-        string_0x0FF:; String.insert("CrackShootAirStart")
-        string_0x100:; String.insert("CrackShootLight")
-        string_0x101:; String.insert("CrackShootStrong")
-        string_0x102:; String.insert("CrackShootLand")
+        string_0x0F1:; String.insert("f1")
+        string_0x0F2:; String.insert("f2")
+        string_0x0F3:; String.insert("f3")
+        string_0x0F4:; String.insert("RisingTackleLight")
+        string_0x0F5:; String.insert("RisingTackleStrong")
+        string_0x0F6:; String.insert("BurningKnuckleLight")
+        string_0x0F7:; String.insert("BurningKnuckleStrong")
+        string_0x0F8:; String.insert("BurningKnuckleEnd")
+        string_0x0F9:; String.insert("BurningKnuckleAirEnd")
+        string_0x0FA:; String.insert("PowerDunkRiseLight")
+        string_0x0FB:; String.insert("PowerDunkRiseStrong")
+        string_0x0FC:; String.insert("PowerDunkFallLight")
+        string_0x0FD:; String.insert("PowerDunkFallStrong")
+        string_0x0FE:; String.insert("PowerDunkLand")
+        string_0x0FF:; String.insert("PowerWaveLight")
+        string_0x100:; String.insert("PowerWaveStrong")
+        string_0x101:; String.insert("CrackShootStart")
+        string_0x102:; String.insert("CrackShootAirStart")
+        string_0x103:; String.insert("CrackShootLight")
+        string_0x104:; String.insert("CrackShootStrong")
+        string_0x105:; String.insert("CrackShootLand")
 
         action_string_table:
         dw Action.COMMON.string_jab3
@@ -449,25 +454,25 @@ scope Terry {
         dw Action.COMMON.string_jabloopend
         dw Action.COMMON.string_appear1
         dw Action.COMMON.string_appear2
-        dw string_0x0E1
-        dw string_0x0E2
-        dw string_0x0E3
+        dw 0;
+        dw 0;
+        dw 0;
         dw string_0x0E4
         dw string_0x0E5
         dw string_0x0E6
-        dw string_0x0E7
-        dw string_0x0E8
+        dw 0;
+        dw 0;
         dw string_0x0E9
-        dw string_0x0EA
-        dw string_0x0EB
-        dw string_0x0EC
-        dw string_0x0ED
-        dw string_0x0EE
-        dw Action.string_0x0C3 // FTilt
-        dw Action.string_0x0D0 // DSmash
-        dw string_0x0F1
-        dw string_0x0F2
-        dw string_0x0F3
+        dw 0;
+        dw 0;
+        dw 0;
+        dw 0;
+        dw 0;
+        dw 0;
+        dw 0;
+        dw 0;
+        dw 0;
+        dw 0;
         dw string_0x0F4
         dw string_0x0F5
         dw string_0x0F6
@@ -483,6 +488,9 @@ scope Terry {
         dw string_0x100
         dw string_0x101
         dw string_0x102
+        dw string_0x103
+        dw string_0x104
+        dw string_0x105
     }
 
     // Set action strings
@@ -755,7 +763,6 @@ scope Terry {
             _check_end:
         }
 
-
         lw at, 0xADC(a0) // flag to know if aerial nsp was already used
         bnez at, _end // if aerial nsp was already used, skip
         nop
@@ -787,6 +794,7 @@ scope Terry {
         _end:
         OS.routine_end(0x20)
     }
+
     Character.table_patch_start(recovery_logic, Character.id.TERRY, 0x4)
     dw TERRY_RECOVERY
     OS.patch_end()

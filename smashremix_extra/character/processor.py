@@ -8,9 +8,10 @@ from pathlib import Path
 
 from smashremix_extra.constants import (
     SMASHREMIX_PATH as smashremix_path,
-    PRIMARY_MOVESETS, SHIELD_POSES, TWELVECB_DEFEAT, COMMAND_SIZES, ExtraFile,
+    PRIMARY_MOVESETS, SHIELD_POSES, TWELVECB_DEFEAT, SP_DUO_POSES, SP_TEAM_POSES, COMMAND_SIZES, ExtraFile,
 )
 from smashremix_extra.image_appender import append_image, get_image_data, ImageMode
+from smashremix_extra.file_appender import append_file, get_pointer, update_pointer
 from smashremix_extra.rom_util import get_attrib_offset
 from smashremix_extra.file_manager import FileManager
 from smashremix_extra.character.hurtbox import Hurtbox
@@ -25,12 +26,14 @@ class CharacterProcessor:
     def __init__(
         self,
         name_texture_default: str,
+        sp_icon_default: str,
         last_sfx_id: int,
         last_remix_sfx_id: int,
         sword_trail_count: int,
         characters_exist: list,
     ):
         self.name_texture_default = name_texture_default
+        self.sp_icon_default = sp_icon_default
         self.LAST_SFX_ID = last_sfx_id
         self.LAST_REMIX_SFX_ID = last_remix_sfx_id
         self.SWORD_TRAIL_COUNT = sword_trail_count
@@ -42,12 +45,16 @@ class CharacterProcessor:
         self.add_to_css_strings = []
         self.victory_theme_strings = []
         self.singleplayer_additions = []
-        self.singleplayer_name_width_defs = []
+        self.singleplayer_name_width_defs = {"normal": [], "team": [], "giant": []}
+        self.singleplayer_remix_match_defs = []
         self.character_names = []
         self.character_skins = []
         self.character_series_models = {}
         self.character_series_textures = {}
         self.character_portrait_defs = []
+        self.character_1p_icon_defs = []
+        self.character_1p_duo_parameter_defs = []
+        self.character_1p_team_parameter_defs = []
         self.character_12cb_defs = []
         self.character_tag_team_preloads = []
         self.character_data_screen_defs = []
@@ -190,31 +197,23 @@ class CharacterProcessor:
                     current = list1_start
 
                     while current != 0x3FFFC:
-                        list1_pos = current
+                        list_pos = current
 
-                        next_list_item = int.from_bytes(
-                            data[list1_pos:list1_pos+2], byteorder='big')
+                        next_list_item = get_pointer(data, list_pos, "next")
 
-                        data_part = int.from_bytes(
-                            data[list1_pos+2:list1_pos+4], byteorder='big')
+                        data_part = get_pointer(data, list_pos, "data")
                         if data_part != 0:
-                            data[list1_pos+2:list1_pos+4] = int(
-                                (data_part * 4 + offset_to_add) // 4
-                            ).to_bytes(2, byteorder='big')
+                            update_pointer(data, list_pos, data_part + offset_to_add, "data")
 
-                        if next_list_item == 0xFFFF:
+                        if next_list_item == 0x3FFFC:
                             if i < len(files_data)-1:
                                 # Point to start of next list instead of FFFF
                                 next_list_offset = int(
                                     file[i+1][1], 16) + sum(files_sizes[:i+1])
-                                data[list1_pos:list1_pos+2] = int(
-                                    next_list_offset/4).to_bytes(2, byteorder='big')
+                                update_pointer(data, list_pos, next_list_offset, "next")
                             break
-                        else:
-                            next_list_item = int(next_list_item * 4)
 
-                        data[list1_pos:list1_pos+2] = int(
-                            (next_list_item + offset_to_add)/4).to_bytes(2, byteorder='big')
+                        update_pointer(data, list_pos, next_list_item + offset_to_add, "next")
                         current = next_list_item
 
                     if list1_start != 0x3FFFC:
@@ -230,22 +229,17 @@ class CharacterProcessor:
                     while current != 0x3FFFC:
                         list_pos = current
 
-                        next_list_item = int.from_bytes(
-                            data[list_pos:list_pos+2], byteorder='big')
+                        next_list_item = get_pointer(data, list_pos, "next")
 
-                        if next_list_item == 0xFFFF:
+                        if next_list_item == 0x3FFFC:
                             if i < len(files_data)-1:
                                 # Point to start of next list instead of FFFF
                                 next_list_offset = int(
                                     file[i+1][2], 16) + sum(files_sizes[:i+1])
-                                data[list_pos:list_pos+2] = int(
-                                    next_list_offset/4).to_bytes(2, byteorder='big')
+                                update_pointer(data, list_pos, next_list_offset, "next")
                             break
-                        else:
-                            next_list_item = int(next_list_item * 4)
 
-                        data[list_pos:list_pos+2] = int(
-                            (next_list_item + offset_to_add)/4).to_bytes(2, byteorder='big')
+                        update_pointer(data, list_pos, next_list_item + offset_to_add, "next")
                         current = next_list_item
 
                     if list2_start != 0x3FFFC:
@@ -359,33 +353,33 @@ class CharacterProcessor:
             af.writelines(lines)
 
         # Add extra files to csv
-        for extra_file in extra_files_to_add:
+        for ef in extra_files_to_add:
             file_reqlist = ""
 
-            if os.path.exists(f"./{output_path}/{extra_file.filename}_reqlist.txt"):
-                file_reqlist = f"{output_path}/{extra_file.filename}_reqlist.txt"
+            if os.path.exists(f"./{output_path}/{ef.filename}_reqlist.txt"):
+                file_reqlist = f"{output_path}/{ef.filename}_reqlist.txt"
 
             FileManager.add_file(
-                path=f"{output_path}/{extra_file.filename}.bin",
-                name=f"{character_folder}_file_{extra_file.filename}",
-                internal_file_table_offset=extra_file.InternalFileTableOffsetBytes,
-                internal_file_resource_offset=extra_file.InternalFileResourceOffsetBytes,
+                path=f"{output_path}/{ef.filename}.bin",
+                name=f"{character_folder}_file_{ef.filename}",
+                internal_file_table_offset=ef.InternalFileTableOffsetBytes,
+                internal_file_resource_offset=ef.InternalFileResourceOffsetBytes,
                 reqlist_path=file_reqlist,
                 compression_level=1
             )
 
         # Add append files to csv
-        for append_file in append_files:
+        for af in append_files:
             file_reqlist = ""
 
-            if os.path.exists(f"./{output_path}/{append_file.filename}_reqlist.txt"):
-                file_reqlist = f"{output_path}/{append_file.filename}_reqlist.txt"
+            if os.path.exists(f"./{output_path}/{af.filename}_reqlist.txt"):
+                file_reqlist = f"{output_path}/{af.filename}_reqlist.txt"
 
             FileManager.add_file(
-                path=f"{output_path}/{append_file.filename}.bin",
-                name=f"{character_folder}_file_{append_file.filename}",
-                internal_file_table_offset=append_file.InternalFileTableOffsetBytes,
-                internal_file_resource_offset=append_file.InternalFileResourceOffsetBytes,
+                path=f"{output_path}/{af.filename}.bin",
+                name=f"{character_folder}_file_{af.filename}",
+                internal_file_table_offset=af.InternalFileTableOffsetBytes,
+                internal_file_resource_offset=af.InternalFileResourceOffsetBytes,
                 reqlist_path=file_reqlist,
                 compression_level=1
             )
@@ -460,8 +454,22 @@ class CharacterProcessor:
             f"{len(re.findall(
                 r".*Character.add_new_action\(",
                 open(f"{original_path}/main.asm", 'r', encoding='utf-8').read()))}, "
-            # jab3, inhale copy, btt_stage_id, btp_stage_id, remix_btt_stage_id, remix_btp_stage_id, sound_type, variant_type
-            f"OS.TRUE, OS.FALSE, Stages.id.BTT_DONKEY_KONG, Stages.id.BTP_DONKEY_KONG, Stages.id.BTT_DONKEY_KONG, Stages.id.BTP_DONKEY_KONG, sound_type.U, variant_type.SPECIAL)"
+            # jab3, inhale copy
+            f"OS.TRUE, "
+            # inhale copy
+            f"OS.{config.get("definitions",{}).get("kirby_hat", "FALSE")}, "
+            # btt_stage_id
+            f"Stages.id.BTT_{config.get("definitions",{}).get("break_the_targets", "STG1")}, "
+            # btp_stage_id
+            f"Stages.id.BTP_{config.get("definitions",{}).get("board_the_platforms", "POLY")}, "
+            # remix_btt_stage_id
+            f"Stages.id.BTT_{config.get("definitions",{}).get("break_the_targets", "STG1")}, "
+            # remix_btp_stage_id
+            f"Stages.id.BTP_{config.get("definitions",{}).get("board_the_platforms", "POLY")}, "
+            # sound_type, variant_type
+            f"sound_type.U, "
+            # variant_type
+            f"variant_type.{config.get("definitions",{}).get("variant_type", "SPECIAL")})"
         )
 
         # Character name
@@ -502,8 +510,7 @@ class CharacterProcessor:
         character_sound_add_list = {}
 
         # Choose CSS Pose (This grabs the digit specified by "select_pose" in the character's config.yaml)
-        select_pose = config.get(
-            "definitions", {}).get("select_pose", 1)
+        select_pose = config.get("definitions", {}).get("select_pose", 1)
         select_pose_string = f"0x0001000{select_pose}"
 
         # Get sounds to add
@@ -552,11 +559,13 @@ class CharacterProcessor:
             announcer_fgm = f"0x{
                 character_sound_add_list.get(sound_name)}"
 
+
         # Calculate 1P name delay if announcer FGM is found
+        sp_config = config.get("singleplayer", {})
         name_delay_sp = "name_delay.DRAGONKING"
 
-        if config.get("singleplayer", {}).get("name_delay"):
-            name_delay_sp = f"0x{config.get("singleplayer", {}).get("name_delay"):08X}"
+        if sp_config.get("name_delay"):
+            name_delay_sp = f"0x{sp_config.get("name_delay"):08X}"
         elif config.get("announcer_fgm"):
             announcer = config.get("sounds").get(
                 config.get("announcer_fgm"))
@@ -588,12 +597,96 @@ class CharacterProcessor:
             f'add_to_single_player(Character.id.{character_folder.upper()}, {name_texture_sp}, {name_delay_sp})')
 
         # Use alternate width for character's 1P name texture if defined
-        if config.get("singleplayer", {}).get("alt_name_width"):
-            self.singleplayer_name_width_defs.append(
-                f"lli     t6, Character.id.{character_folder.upper()}            // t6 = {character_folder.upper()}"
-                f"\n\t\tbeql    t0, t6, _alt_width                // use alt width if {character_folder.title()}"
-                f"\n\t\tlli     t6, 0x{config.get("singleplayer", {}).get("alt_name_width"):04X}                        // t6 = width of \"{character_folder.title()}\""
+        alt_name_width = sp_config.get("alt_name_width", None)
+        alt_name_width_team = sp_config.get("alt_name_width_team", alt_name_width)
+        alt_name_width_giant = sp_config.get("alt_name_width_giant", alt_name_width)
+
+        if alt_name_width:
+            self.singleplayer_name_width_defs["normal"].append(
+                f"lli     t6, Character.id.{character_folder.upper()}\n\t\t"
+                f"beql    t0, t6, _alt_width                // use alt width if {character_name}\n\t\t"
+                f"lli     t6, 0x{alt_name_width:04X}                        // t6 = width of \"{character_name}\""
             )
+
+        if alt_name_width or alt_name_width_team:
+            self.singleplayer_name_width_defs["team"].append(
+                f"lli     t6, {name_texture_sp} + 0x10\n\t\t"
+                f"beql    t8, t6, _set_alt_width_team // if {character_name}, use alternate width\n\t\t"
+                f"lli     t6, 0x{alt_name_width_team:04X}                  // t6 = width of \"{character_name}\""
+            )
+
+        if alt_name_width or alt_name_width_giant:
+            self.singleplayer_name_width_defs["giant"].append(
+                f"lli     t6, {name_texture_sp} + 0x10\n\t\t"
+                f"beql    t8, t6, _set_alt_width_giant // if {character_name}, use alternate width\n\t\t"
+                f"lli     t6, 0x{alt_name_width_giant:04X}                  // t6 = width of \"{character_name}\""
+            )
+
+        # Check for 1P icon and use if found
+        icon_offset = self.sp_icon_default
+
+        if os.path.isfile(f"{output_path}/1p_icon.png"):
+            pixels, w, h = get_image_data(
+                f"{output_path}/1p_icon.png"
+            )
+            icon_offset = append_image(
+                "scripts/000B.bin",
+                "scripts/000B.bin",
+                pixels,
+                w, h,
+                ImageMode.RGBA5551
+            )
+            icon_offset = f"0x{icon_offset:X} + 0x10"
+
+        self.character_1p_icon_defs.append(
+            f"constant {character_folder.upper()}({icon_offset})")
+
+        singleplayer_icon = f"progress_icon.{character_folder.upper()}"
+
+        # Remix 1P Character Battle versus parameters
+        if config.get("definitions", {}).get("variant_type", "SPECIAL") == "NA":
+
+            flags = sp_config.get("flags", 0)
+
+            stage1 = sp_config.get("stage1", "DREAM_LAND")
+            stage2 = sp_config.get("stage2", "WINTER_DL")
+            stage3 = sp_config.get("stage3", "FINAL_DESTINATION_DL")
+
+            scale = sp_config.get("scale", "6F80").zfill(8)
+
+            self.singleplayer_remix_match_defs.extend([
+                f"// {character_name} match settings",
+                f"{character_folder.lower()}_match_setting:",
+                f"dw  0x{flags} // flag",
+                f"db  Character.id.{character_folder.upper()} // Character ID",
+                f"db  Stages.id.{stage1} // Stage Option 1",
+                f"db  Stages.id.{stage2} // Stage Option 2",
+                f"db  Stages.id.{stage3} // Stage Option 3",
+                f"dw  {name_texture_sp} + 0x10 // name texture",
+                f"dw  {announcer_fgm} // Announcer Call",
+                f"dw  0x{scale} // Model Scale",
+                f"dw  progress_icon.{character_folder.upper()} // Progress Icon\n",
+            ])
+
+        # Remix 1P Duo menu parameters
+        duo_config = sp_config.get("duo", {})
+
+        anim = duo_config.get("anim", SP_DUO_POSES.get(config['definitions']['base_character']))
+        moveset = duo_config.get("moveset", "duo_moveset")
+        flags = duo_config.get("flags", 0)
+
+        self.character_1p_duo_parameter_defs.append(
+            f"add_duo_parameters({anim}, {moveset}, {flags}) // {character_folder.upper()}")
+
+        # Remix 1P Team menu parameters
+        team_config = sp_config.get("team", {})
+
+        anim = team_config.get("anim", SP_TEAM_POSES.get(config['definitions']['base_character']))
+        moveset = team_config.get("moveset", "team_moveset")
+        flags = team_config.get("flags", 0)
+
+        self.character_1p_team_parameter_defs.append(
+            f"add_team_parameters({anim}, {moveset}, {flags}) // {character_folder.upper()}")
 
         # Get series to use for character
         series_css = config.get("definitions", {}).get(
@@ -627,8 +720,8 @@ class CharacterProcessor:
 
         # If portrait override character exists, use their portrait
         if config.get("dpad_original", "") in self.characters_exist and os.path.isfile(
-            f"extra_characters/{config.get("dpad_original", "")}/portrait.png"):
-                portrait_texture = f"portrait_offsets.{config.get("dpad_original", "").upper()}"
+                f"extra_characters/{config.get("dpad_original", "")}/portrait.png"):
+            portrait_texture = f"portrait_offsets.{config.get("dpad_original", "").upper()}"
         # Otherwise, check for portrait image and use if found
         elif os.path.isfile(f"{output_path}/portrait.png"):
             if os.path.getsize("scripts/0A05.bin") + (0x860 * 2) < 0x3FFFC:
@@ -751,103 +844,41 @@ class CharacterProcessor:
 
         # Check for 3D results/data series logo file and use if found
         if os.path.exists(f"{output_path}/series_logo.bin"):
-            vnFile = f"{output_path}/series_logo.bin"
-            rxFile = "scripts/0023.bin"
+            with open(f"{output_path}/series_logo.bin", 'rb') as logo_file:
+                logo = bytearray(logo_file.read())
 
-            vnSize = os.path.getsize(vnFile)
             # Seems like Ness logo data always begins here once imported through GEE
-            vnLogoBeginOffset = int('0x5C58', 16)
+            logo_offset = 0x5C58
 
-            rxSize = os.path.getsize(rxFile)
-            rxAppendedSize = rxSize + (vnSize - vnLogoBeginOffset)
+            # Internal file table offset after GEE logo import (offset to first pointer)
+            pointer_offset = 0x624
 
-            vnPointingToArray = []
+            while pointer_offset < logo_offset:
+                next_pointer = get_pointer(logo, pointer_offset, "next")
 
-            vnPointerArray = []
-            rxPointerArray = []
+                if next_pointer > logo_offset:
+                    # got first pointer in character's logo data
+                    pointer_offset = next_pointer - logo_offset
+                    break
 
-            rxSeriesOffsetArray = []
+                pointer_offset = next_pointer
 
-            pointerUpdateValue = (rxAppendedSize - vnSize)
+            with open(f"{output_path}/series_logo.bin", 'wb') as logo_file:
+                logo_file.write(logo[logo_offset:])
 
-            # Read vanilla file for pointers
-            with open(vnFile, 'br') as fvn:
-                print("Found series_logo.bin, converting to Remix..")
-                data = fvn.read(4)
-                dataReadLocation = 0
-                while data:
-                    vnPointerA = int.from_bytes(data[:2], "big")
-                    vnPointerB = int.from_bytes(data[2:4], "big")
+            append_file(
+                f"{output_path}/series_logo.bin", logo_offset, pointer_offset,
+                "scripts/0023.bin", 0x4,
+                "scripts/0023.bin"
+            )
 
-                    vnPointerAOffset = vnPointerA*4
-                    vnPointerBOffset = vnPointerB*4
-
-                    rxPointerA = int(
-                        (vnPointerAOffset + pointerUpdateValue)/4)
-                    rxPointerB = int(
-                        (vnPointerBOffset + pointerUpdateValue)/4)
-
-                    # if reading within the offsets of the desired logo + PointerA points somewhere within those offsets, increment pointerGood
-                    if (dataReadLocation >= vnLogoBeginOffset) and (vnPointerAOffset >= vnLogoBeginOffset) and (vnPointerAOffset < vnSize):
-                        pointerGood += 1
-                    else:
-                        pointerGood = 0
-
-                    # if reading within the offsets of the desired logo + PointerB points somewhere within those offsets, increment pointerGood
-                    if (dataReadLocation >= vnLogoBeginOffset) and (vnPointerBOffset >= vnLogoBeginOffset) and (vnPointerBOffset < vnSize):
-                        pointerGood += 1
-                    else:
-                        pointerGood = 0
-
-                    # if there are 2 pointers in a row, add to the list
-                    if (pointerGood == 2):
-                        vnPointingToArray.append(dataReadLocation)
-                        vnPointingToArray.append(dataReadLocation+2)
-
-                        vnPointerArray.append(vnPointerA)
-                        vnPointerArray.append(vnPointerB)
-                        rxPointerArray.append(rxPointerA)
-                        rxPointerArray.append(rxPointerB)
-
-                    # If reading at vnLogoBeginOffset - 0x4, add to the list
-                    # This is needed to update the currently last in file logo's pointer for the next logo's data from FFFF to the correct location later in the script
-                    if (dataReadLocation == (vnLogoBeginOffset - int('0x4', 16))):
-                        vnPointingToArray.append(dataReadLocation)
-
-                        vnPointerArray.append(vnPointerA)
-                        rxPointerArray.append(rxPointerA)
-
-                    # This force updates the last pointer, as it gets skipped under normal circumstances, since there aren't 2 pointers in a row here
-                    # Pointer A will always be FFFF
-                    if (dataReadLocation == (vnSize - 4)):
-                        vnPointingToArray.append(dataReadLocation+2)
-
-                        vnPointerArray.append(vnPointerB)
-                        rxPointerArray.append(rxPointerB)
-
-                    # reset pointerGood so we can check for 2 pointers in a row again
-                    pointerGood = 0
-                    dataReadLocation += 4
-                    data = fvn.read(4)
-
-            # Append character's logo data to remix file
-            with open(rxFile, 'ba') as frx:
-                with open(vnFile, 'br') as fvn:
-                    fvn.seek(vnLogoBeginOffset)
-                    frx.write(fvn.read())
-
-            # Overwrite old pointers with updated ones
-            with open(rxFile, 'br+') as frx:
-                for i in range(len(vnPointingToArray)):
-                    frx.seek(
-                        (rxSize + (vnPointingToArray[i] - vnLogoBeginOffset)))
-                    frx.write(rxPointerArray[i].to_bytes(2, 'big'))
+            logo_length = os.path.getsize("scripts/0023.bin")
 
             # Get series logo offsets
             self.character_series_models[f"{character_folder}"] = {
-                "offset": f"0x{rxAppendedSize - int('0x168', 16):0X}",
-                "zoom": f"0x{rxAppendedSize - int('0x60', 16):0X}",
-                "color": f"0x{rxAppendedSize - int('0x8', 16):0X}"
+                "offset": f"0x{(logo_length - 0x168):0X}",
+                "zoom":   f"0x{(logo_length - 0x60):0X}",
+                "color":  f"0x{(logo_length - 0x8):0X}"
             }
 
             series_model = character_folder.upper()
@@ -884,8 +915,8 @@ class CharacterProcessor:
         # Override generated values with config if found
         wins_lx = config.get("results", {}).get("wins_x", wins_lx)
         str_lx = config.get("results", {}).get("name_x", str_lx)
-        str_scale = config.get("results", {}).get(
-            "name_scale", str_scale)
+        str_scale = config.get("results", {}).get("name_scale", str_scale)
+        victory_theme = config.get("results", {}).get("win_bgm", victory_theme)
 
         self.results_screen_defs.append(
             "add_to_results_screen("
@@ -971,7 +1002,7 @@ class CharacterProcessor:
                 w, h,
                 ImageMode.I8
             )
-            bio_texture += int("0x80000000", 16)
+            bio_texture += 0x80000000
             bio_texture = f"0x{bio_texture:08X}"
 
         if os.path.exists(f"{output_path}/datascreen/name.png"):
@@ -985,7 +1016,7 @@ class CharacterProcessor:
                 w, h,
                 ImageMode.I8
             )
-            name_texture += int("0x80000000", 16)
+            name_texture += 0x80000000
             name_texture = f"0x{name_texture:08X}"
 
         if os.path.exists(f"{output_path}/datascreen/works.png"):
@@ -999,7 +1030,7 @@ class CharacterProcessor:
                 w, h,
                 ImageMode.I8
             )
-            works_texture += int("0x80000000", 16)
+            works_texture += 0x80000000
             works_texture = f"0x{works_texture:08X}"
 
         if os.path.exists(f"{output_path}/datascreen/special_u.png"):
@@ -1013,7 +1044,7 @@ class CharacterProcessor:
                 w, h,
                 ImageMode.I8
             )
-            usp_texture += int("0x80000000", 16)
+            usp_texture += 0x80000000
             usp_texture = f"0x{usp_texture:08X}"
 
         if os.path.exists(f"{output_path}/datascreen/special_n.png"):
@@ -1027,7 +1058,7 @@ class CharacterProcessor:
                 w, h,
                 ImageMode.I8
             )
-            nsp_texture += int("0x80000000", 16)
+            nsp_texture += 0x80000000
             nsp_texture = f"0x{nsp_texture:08X}"
 
         if os.path.exists(f"{output_path}/datascreen/special_d.png"):
@@ -1041,7 +1072,7 @@ class CharacterProcessor:
                 w, h,
                 ImageMode.I8
             )
-            dsp_texture += int("0x80000000", 16)
+            dsp_texture += 0x80000000
             dsp_texture = f"0x{dsp_texture:08X}"
 
         add_to_data_string = (
@@ -1260,13 +1291,14 @@ class CharacterProcessor:
                 f"nop\n\t\t"
                 f"li      a1, custom_display_lists_struct_{character_folder.lower()}_{first_part.lower()}\n\t\t"
                 f"lli     a2, Character.id.{character_folder.upper()}\n\t\t"
-                f"beq     a0, a2, _clear{f"_{character_folder.lower()}" if len(parts) > 1 else ""}"
+                f"beq     a0, a2, _clear{f"_{character_folder.lower()}" if len(
+                    parts) > 1 else ""}"
             )
 
             for idx, obj in enumerate(parts):
                 obj_config = parts[obj]
-                hi_config  = obj_config.get("hipoly", {})
-                lo_config  = obj_config.get("lopoly", {})
+                hi_config = obj_config.get("hipoly", {})
+                lo_config = obj_config.get("lopoly", {})
                 hi_offsets = hi_config.get("cmd", [])
                 lo_offsets = lo_config.get("cmd", [])
 
@@ -1287,7 +1319,8 @@ class CharacterProcessor:
                     f"dh {lo_offsets[1] if len(lo_offsets) > 1 else (hi_offsets[1] if len(hi_offsets) > 1 else "0xFFFF")}       // 0x0024: offset to 2nd set render mode command for high poly, or -1\n\t\t"
                     f"dh {lo_offsets[2] if len(lo_offsets) > 2 else (hi_offsets[2] if len(hi_offsets) > 2 else "0xFFFF")}       // 0x0026: offset to 3rd set render mode command for high poly, or -1\n\t\t"
                     f"{f"hi_default:; create_custom_display_list({",".join(hi_config["default"])})\n\t\t" if hi_offsets else ""}"
-                    f"{f"hi_alpha:; create_custom_display_list({",".join(hi_config["alpha"])})" if hi_offsets else ""}" + f"{"\n\t\t" if lo_offsets else ""}"
+                    f"{f"hi_alpha:; create_custom_display_list({",".join(hi_config["alpha"])})" if hi_offsets else ""}" +
+                    f"{"\n\t\t" if lo_offsets else ""}"
                     f"{f"lo_default:; create_custom_display_list({",".join(lo_config["default"])})\n\t\t" if lo_offsets else ""}"
                     f"{f"lo_alpha:; create_custom_display_list({",".join(lo_config["alpha"])})" if lo_offsets else ""}"
                     "\n\t}\n"
@@ -1296,11 +1329,13 @@ class CharacterProcessor:
                 if len(parts) > 1:
                     self.character_cloaking_fix[character_folder]["clear_asm"].append(
                         # if first part, add label
-                        f"{f"_clear_{character_folder.lower()}:\n\t\t" if idx == 0 else ""}"
+                        f"{f"_clear_{character_folder.lower()}:\n\t\t" if idx ==
+                           0 else ""}"
                         f"// {obj.lower()}\n\t\t"
 
                         # if not first part, need to load part struct
-                        f"{f"li      a1, custom_display_lists_struct_{character_folder.lower()}_{obj.lower()}\n\t\t" if idx != 0 else ""}"
+                        f"{f"li      a1, custom_display_lists_struct_{character_folder.lower()}_{obj.lower()}\n\t\t" if idx !=
+                           0 else ""}"
 
                         # if last part, branch to final clear
                         f"{"b       _clear\n\t\tnop\n\t\t" if idx == len(parts) - 1 else ""}"
@@ -1313,7 +1348,8 @@ class CharacterProcessor:
         lif_files = []
         if os.path.exists(f"{original_path}/additions/"):
             lif_files = os.listdir(f"{original_path}/additions/")
-            lif_files = [f"{original_path}/additions/{lif}" for lif in lif_files if lif.lower().endswith(".yaml")]
+            lif_files = [
+                f"{original_path}/additions/{lif}" for lif in lif_files if lif.lower().endswith(".yaml")]
             lif_files.sort()
 
         for lif_yaml in lif_files:
@@ -1336,7 +1372,8 @@ class CharacterProcessor:
                 if isinstance(patch_line, str):
                     patch_line = [patch_line]
 
-                patch_line = patch.get("prefix", "") + patch.get("suffix", "").join(patch_line)
+                patch_line = patch.get("prefix", "") + \
+                    patch.get("suffix", "").join(patch_line)
 
                 self.character_lineinfile_patches.append([
                     patch_path,
@@ -1498,6 +1535,41 @@ class CharacterProcessor:
                 if bthrow is not None:
                     data[curr_offset+4:curr_offset +
                          8] = bthrow.to_bytes(4, 'big')
+
+        # Set texture-form entries (FTAttributes.textureparts_container), used by
+        # the moveset "Set Texture Form" command to swap a model part between
+        # alternate textures (e.g. facial expressions).
+        # Each entry in config['attributes']['texture_forms'] is one literal container
+        # entry (a list with one "0x0C" gives a single entry, like Mario; two gives
+        # Fox's 2-entry setup). Every vanilla character with more than one texture form
+        # for the same part follows the same pattern: the 1st occurrence of a part gets
+        # {0x00, 0x00} and the 2nd occurrence gets {0x01, 0x01}, so that's assigned
+        # automatically by occurrence order. The container normally has no spare room to
+        # grow in place (it sits in the middle of main.bin, right before other structs),
+        # so instead of resizing it in place we build a new container, append it to the
+        # end of main.bin, and repoint the textureparts_container field at it.
+        texture_forms = config.get("attributes", {}).get("texture_forms")
+        if texture_forms:
+            container = bytearray()
+            part_occurrences = {}
+            for part in texture_forms:
+                part_id = int(part, 16)
+                occurrence = part_occurrences.get(part_id, 0)
+                part_occurrences[part_id] = occurrence + 1
+                container += bytes([part_id, occurrence, occurrence])
+
+            while len(container) % 4 != 0:
+                container.append(0x00)
+
+            while len(data) % 4 != 0:
+                data.append(0x00)
+
+            new_container_offset = len(data)
+            data.extend(container)
+
+            textureparts_pointer = attr_offset + 0x330
+            data[textureparts_pointer+2:textureparts_pointer +
+                 4] = (new_container_offset // 4).to_bytes(2, byteorder='big')
 
         # Update pointers to new external files we're adding to the main bin
         # From config->offsets->main, get the second number. That's the address for the first entry in a linked list for external files in data (main.bin file)
@@ -1720,5 +1792,3 @@ class CharacterProcessor:
                         f'\tChargeSmashAttacks.set_charged_smash_attacks(Character.id.{character_folder.upper()}, charge_smash_frames)\n\n')
 
                     appended_movesets = True
-
-

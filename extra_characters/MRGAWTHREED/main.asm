@@ -1,8 +1,6 @@
 // GameAndWatch.asm
 
 // This file contains file inclusions, action edits, and assembly for Mr. Game and Watch.
-// To Shino: IDK which of these insert commands you need, so I just commented them out.
-// Uncomment or add what you need to this file to make it work.
 
 include "./GameAndWatchSpecial.asm"
 
@@ -80,25 +78,25 @@ scope GameAndWatch {
         string_0x0E1:; String.insert("Fire")
         string_0x0E2:; String.insert("FireAir")
         string_0x0E3:; String.insert("JudgeBegin")
-		string_0x0E4:; String.insert("JudgeBegin")
+	string_0x0E4:; String.insert("JudgeBegin")
         string_0x0E5:; String.insert("Judge1")
-		string_0x0E6:; String.insert("Judge1Air")
+	string_0x0E6:; String.insert("Judge1Air")
         string_0x0E7:; String.insert("Judge2")
-		string_0x0E8:; String.insert("Judge2Air")
+	string_0x0E8:; String.insert("Judge2Air")
         string_0x0E9:; String.insert("Judge3")
-		string_0x0EA:; String.insert("Judge3Air")
+	string_0x0EA:; String.insert("Judge3Air")
         string_0x0EB:; String.insert("Judge4")
-		string_0x0EC:; String.insert("Judge4Air")
+	string_0x0EC:; String.insert("Judge4Air")
         string_0x0ED:; String.insert("Judge5")
-		string_0x0EE:; String.insert("Judge5Air")
-		string_0x0EF:; String.insert("Judge6")
-		string_0x0F0:; String.insert("Judge6Air")
+	string_0x0EE:; String.insert("Judge5Air")
+	string_0x0EF:; String.insert("Judge6")
+	string_0x0F0:; String.insert("Judge6Air")
         string_0x0F1:; String.insert("Judge7")
-		string_0x0F2:; String.insert("Judge7Air")
+	string_0x0F2:; String.insert("Judge7Air")
         string_0x0F3:; String.insert("Judge8")
-		string_0x0F4:; String.insert("Judge8Air")
+	string_0x0F4:; String.insert("Judge8Air")
         string_0x0F5:; String.insert("Judge9")
-		string_0x0F6:; String.insert("Judge9Air")
+	string_0x0F6:; String.insert("Judge9Air")
         string_0x0F7:; String.insert("ParachuteFloat")
 
         action_string_table:
@@ -111,25 +109,25 @@ scope GameAndWatch {
         dw string_0x0E2 //Action.MARIO.string_0x0E2
         dw string_0x0E3 //Action.MARIO.string_0x0E3
         dw string_0x0E4 //Action.MARIO.string_0x0E4
-		dw string_0x0E5
-		dw string_0x0E6
-		dw string_0x0E7
-		dw string_0x0E8
-		dw string_0x0E9
-		dw string_0x0EA
-		dw string_0x0EB
-		dw string_0x0EC
-		dw string_0x0ED
-		dw string_0x0EE
-		dw string_0x0EF
-		dw string_0x0F0
-		dw string_0x0F1
-		dw string_0x0F2
-		dw string_0x0F3
-		dw string_0x0F4
-		dw string_0x0F5
-		dw string_0x0F6
-		dw string_0x0F7
+	dw string_0x0E5
+	dw string_0x0E6
+	dw string_0x0E7
+	dw string_0x0E8
+	dw string_0x0E9
+	dw string_0x0EA
+	dw string_0x0EB
+	dw string_0x0EC
+	dw string_0x0ED
+	dw string_0x0EE
+	dw string_0x0EF
+	dw string_0x0F0
+	dw string_0x0F1
+	dw string_0x0F2
+	dw string_0x0F3
+	dw string_0x0F4
+	dw string_0x0F5
+	dw string_0x0F6
+	dw string_0x0F7
     }
 
     OS.align(16)
@@ -339,7 +337,7 @@ scope GameAndWatch {
     Character.edit_action_parameters(MRGAWTHREED,   0xE4,                   File.MRGAWTHREED_ANIM_DSPAIR,              DOWN_SPECIAL_1,                    	-1)
 	
     Character.edit_action_parameters(MRGAWTHREED,   0x0D6,                  File.MRGAWTHREED_ANIM_LANDN,     SLOPES,                     -1)
-    Character.edit_action_parameters(MRGAWTHREED,   0x0D7,                  File.MRGAWTHREED_ANIM_LANDF,     SLOPES,                     -1)
+    Character.edit_action_parameters(MRGAWTHREED,   0x0D7,                  File.MRGAWTHREED_ANIM_LANDF,     FAIRLAND,                   -1)
     Character.edit_action_parameters(MRGAWTHREED,   0x0D8,                  File.MRGAWTHREED_ANIM_LANDB,     BAIRLAND,                   -1)
     Character.edit_action_parameters(MRGAWTHREED,   0x0D9,                  File.MRGAWTHREED_ANIM_LANDU,     SLOPES,                     -1)
     Character.edit_action_parameters(MRGAWTHREED,   0x0DA,                  File.MRGAWTHREED_ANIM_LANDD,     DAIRLAND,                   -1)
@@ -353,48 +351,47 @@ scope GameAndWatch {
     Character.edit_action(MRGAWTHREED,  Action.JudgeBeginAir,   	        -1,             GameAndWatchDSP.main,          		-1,					0x800D90E0,			GameAndWatchDSP.air_collision_)
 	
 	// Add Action Parameters             // Action Name      // Base Action  // Animation                                   // Moveset Data        // Flags
-	Character.add_new_action_params(MRGAWTHREED, DSP_Ground_1,   	 -1,             File.MRGAWTHREED_ANIM_DSPGND,   			DOWN_SPECIAL_1,        -1)
+    Character.add_new_action_params(MRGAWTHREED, DSP_Ground_1,   	 -1,             File.MRGAWTHREED_ANIM_DSPGND,   			DOWN_SPECIAL_1,        -1)
     Character.add_new_action_params(MRGAWTHREED, DSP_Air_1,      	 -1,             File.MRGAWTHREED_ANIM_DSPAIR,   			DOWN_SPECIAL_1,        -1)
-	Character.add_new_action_params(MRGAWTHREED, DSP_Ground_2,   	 -1,             File.MRGAWTHREED_ANIM_DSPGND,   			DOWN_SPECIAL_2,        -1)
+    Character.add_new_action_params(MRGAWTHREED, DSP_Ground_2,   	 -1,             File.MRGAWTHREED_ANIM_DSPGND,   			DOWN_SPECIAL_2,        -1)
     Character.add_new_action_params(MRGAWTHREED, DSP_Air_2,      	 -1,             File.MRGAWTHREED_ANIM_DSPAIR,   			DOWN_SPECIAL_2,        -1)
-	Character.add_new_action_params(MRGAWTHREED, DSP_Ground_3,   	 -1,             File.MRGAWTHREED_ANIM_DSPGND,   			DOWN_SPECIAL_3,        -1)
+    Character.add_new_action_params(MRGAWTHREED, DSP_Ground_3,   	 -1,             File.MRGAWTHREED_ANIM_DSPGND,   			DOWN_SPECIAL_3,        -1)
     Character.add_new_action_params(MRGAWTHREED, DSP_Air_3,      	 -1,             File.MRGAWTHREED_ANIM_DSPAIR,   			DOWN_SPECIAL_3,        -1)
-	Character.add_new_action_params(MRGAWTHREED, DSP_Ground_4,   	 -1,             File.MRGAWTHREED_ANIM_DSPGND,   			DOWN_SPECIAL_4,        -1)
+    Character.add_new_action_params(MRGAWTHREED, DSP_Ground_4,   	 -1,             File.MRGAWTHREED_ANIM_DSPGND,   			DOWN_SPECIAL_4,        -1)
     Character.add_new_action_params(MRGAWTHREED, DSP_Air_4,      	 -1,             File.MRGAWTHREED_ANIM_DSPAIR,   			DOWN_SPECIAL_4,        -1)
-	Character.add_new_action_params(MRGAWTHREED, DSP_Ground_5,   	 0xE3,           File.MRGAWTHREED_ANIM_DSPGND,   		        DOWN_SPECIAL_5,        -1)
+    Character.add_new_action_params(MRGAWTHREED, DSP_Ground_5,   	 0xE3,           File.MRGAWTHREED_ANIM_DSPGND,   		        DOWN_SPECIAL_5,        -1)
     Character.add_new_action_params(MRGAWTHREED, DSP_Air_5,      	 0xE4,           File.MRGAWTHREED_ANIM_DSPAIR,   		        DOWN_SPECIAL_5,        -1)
-	Character.add_new_action_params(MRGAWTHREED, DSP_Ground_6,   	 -1,             File.MRGAWTHREED_ANIM_DSPGND,   			DOWN_SPECIAL_6,        -1)
+    Character.add_new_action_params(MRGAWTHREED, DSP_Ground_6,   	 -1,             File.MRGAWTHREED_ANIM_DSPGND,   			DOWN_SPECIAL_6,        -1)
     Character.add_new_action_params(MRGAWTHREED, DSP_Air_6,      	 -1,             File.MRGAWTHREED_ANIM_DSPAIR,   			DOWN_SPECIAL_6,        -1)
-	Character.add_new_action_params(MRGAWTHREED, DSP_Ground_7,   	 -1,             File.MRGAWTHREED_ANIM_DSPGND,   			DOWN_SPECIAL_7,        -1)
+    Character.add_new_action_params(MRGAWTHREED, DSP_Ground_7,   	 -1,             File.MRGAWTHREED_ANIM_DSPGND,   			DOWN_SPECIAL_7,        -1)
     Character.add_new_action_params(MRGAWTHREED, DSP_Air_7,      	 -1,             File.MRGAWTHREED_ANIM_DSPAIR,   			DOWN_SPECIAL_7,        -1)
-	Character.add_new_action_params(MRGAWTHREED, DSP_Ground_8,   	 -1,             File.MRGAWTHREED_ANIM_DSPGND,   			DOWN_SPECIAL_8,        -1)
+    Character.add_new_action_params(MRGAWTHREED, DSP_Ground_8,   	 -1,             File.MRGAWTHREED_ANIM_DSPGND,   			DOWN_SPECIAL_8,        -1)
     Character.add_new_action_params(MRGAWTHREED, DSP_Air_8,      	 -1,             File.MRGAWTHREED_ANIM_DSPAIR,   			DOWN_SPECIAL_8,        -1)
-	Character.add_new_action_params(MRGAWTHREED, DSP_Ground_9,   	 -1,             File.MRGAWTHREED_ANIM_DSPGND,   			DOWN_SPECIAL_9,        -1)
+    Character.add_new_action_params(MRGAWTHREED, DSP_Ground_9,   	 -1,             File.MRGAWTHREED_ANIM_DSPGND,   			DOWN_SPECIAL_9,        -1)
     Character.add_new_action_params(MRGAWTHREED, DSP_Air_9,      	 -1,             File.MRGAWTHREED_ANIM_DSPAIR,   			DOWN_SPECIAL_9,        -1)
 
     Character.add_new_action_params(MRGAWTHREED, USP_Float,      	 -1,             File.MRGAWTHREED_ANIM_USPFLOAT,   			UP_SPECIAL_FLOAT,      0x00000000)
 	
-    // Add Actions               // Action Name     // Base Action     //Parameters                    // Staling ID   	// Main ASM                     					// Interrupt/Other ASM      				// Movement/Physics ASM             		// Collision ASM	
-    Character.add_new_action(MRGAWTHREED, DSP_Ground_1,   		-1,         	ActionParams.DSP_Ground_1,   		0x1E,           GameAndWatchDSP.attacks_main_,    					-1,    										0x800D8BB4,             					GameAndWatchDSP.ground_collision_)
-    Character.add_new_action(MRGAWTHREED, DSP_Air_1,  			-1,             ActionParams.DSP_Air_1,  			0x1E,           GameAndWatchDSP.attacks_main_,    					-1,    										0x800D90E0,      							GameAndWatchDSP.air_collision_)
-    Character.add_new_action(MRGAWTHREED, DSP_Ground_2,  		-1,             ActionParams.DSP_Ground_2,  		0x1E,           GameAndWatchDSP.attacks_main_,    					-1,    										0x800D8BB4,      							GameAndWatchDSP.ground_collision_)
-    Character.add_new_action(MRGAWTHREED, DSP_Air_2, 			-1,             ActionParams.DSP_Air_2, 			0x1E,           GameAndWatchDSP.attacks_main_,    					-1,    										0x800D90E0, 								GameAndWatchDSP.air_collision_)
-    Character.add_new_action(MRGAWTHREED, DSP_Ground_3, 		-1,             ActionParams.DSP_Ground_3, 			0x1E,           GameAndWatchDSP.attacks_main_,    					-1,    										0x800D8BB4, 								GameAndWatchDSP.ground_collision_)
-	Character.add_new_action(MRGAWTHREED, DSP_Air_3, 			-1,             ActionParams.DSP_Air_3, 			0x1E,           GameAndWatchDSP.attacks_main_,    					-1,    										0x800D90E0, 								GameAndWatchDSP.air_collision_)
-    Character.add_new_action(MRGAWTHREED, DSP_Ground_4,    		-1,             ActionParams.DSP_Ground_4,    		0x1E,           GameAndWatchDSP.attacks_main_,         				-1,                         				0x800D8BB4,             					GameAndWatchDSP.ground_collision_)
-    Character.add_new_action(MRGAWTHREED, DSP_Air_4,     		-1,             ActionParams.DSP_Air_4,     		0x1E,           GameAndWatchDSP.attacks_main_,      				-1,                           				0x800D90E0,             					GameAndWatchDSP.air_collision_)
-    Character.add_new_action(MRGAWTHREED, DSP_Ground_5,      	-1,             ActionParams.DSP_Ground_5,      	0x1E,           GameAndWatchDSP.attacks_main_,       				-1,                         				0x800D8BB4,             					GameAndWatchDSP.ground_collision_)
-	Character.add_new_action(MRGAWTHREED, DSP_Air_5,   			-1,         	ActionParams.DSP_Air_5,   			0x1E,           GameAndWatchDSP.attacks_main_,    					-1,    										0x800D90E0,             					GameAndWatchDSP.air_collision_)
-    Character.add_new_action(MRGAWTHREED, DSP_Ground_6,  		-1,             ActionParams.DSP_Ground_6,  		0x1E,           GameAndWatchDSP.attacks_main_,    					-1,    										0x800D8BB4,      							GameAndWatchDSP.ground_collision_)
-    Character.add_new_action(MRGAWTHREED, DSP_Air_6,  			-1,             ActionParams.DSP_Air_6,  			0x1E,           GameAndWatchDSP.attacks_main_,    					-1,    										0x800D90E0,      							GameAndWatchDSP.air_collision_)
-    Character.add_new_action(MRGAWTHREED, DSP_Ground_7, 		-1,             ActionParams.DSP_Ground_7, 			0x1E,           GameAndWatchDSP.attacks_main_,    					-1,    										0x800D8BB4, 								GameAndWatchDSP.ground_collision_)
-    Character.add_new_action(MRGAWTHREED, DSP_Air_7, 			-1,             ActionParams.DSP_Air_7, 			0x1E,           GameAndWatchDSP.attacks_main_,    					-1,    										0x800D90E0, 								GameAndWatchDSP.air_collision_)
-	Character.add_new_action(MRGAWTHREED, DSP_Ground_8, 		-1,             ActionParams.DSP_Ground_8, 			0x1E,           GameAndWatchDSP.attacks_main_,    					-1,    										0x800D8BB4, 								GameAndWatchDSP.ground_collision_)
-    Character.add_new_action(MRGAWTHREED, DSP_Air_8,    		-1,             ActionParams.DSP_Air_8,    			0x1E,           GameAndWatchDSP.attacks_main_,         				-1,                           				0x800D90E0,             					GameAndWatchDSP.air_collision_)
-    Character.add_new_action(MRGAWTHREED, DSP_Ground_9,     	-1,             ActionParams.DSP_Ground_9,     		0x1E,           GameAndWatchDSP.attacks_main_,      				-1,                        					0x800D8BB4,             					GameAndWatchDSP.ground_collision_)
-    Character.add_new_action(MRGAWTHREED, DSP_Air_9,      		-1,             ActionParams.DSP_Air_9,      		0x1E,           GameAndWatchDSP.attacks_main_,       				-1,                           				0x800D90E0,             					GameAndWatchDSP.air_collision_)
-
-    Character.add_new_action(MRGAWTHREED, USP_Float, -1, ActionParams.USP_Float, -1, 0x00000000, GameAndWatchUSP.float_interrupt_, GameAndWatchUSP.float_physics_, GameAndWatchUSP.float_collision_)
+    // Add Actions               // Action Name     // Base Action     //Parameters    // Staling ID   	// Main ASM    // Interrupt/Other ASM  // Movement/Physics ASM  // Collision ASM	
+    Character.add_new_action(MRGAWTHREED, DSP_Ground_1,	-1, ActionParams.DSP_Ground_1, 0x1E, GameAndWatchDSP.attacks_main_, -1,	0x800D8BB4, GameAndWatchDSP.ground_collision_)
+    Character.add_new_action(MRGAWTHREED, DSP_Air_1,  	-1, ActionParams.DSP_Air_1,    0x1E, GameAndWatchDSP.attacks_main_, -1, 0x800D90E0, GameAndWatchDSP.air_collision_)
+    Character.add_new_action(MRGAWTHREED, DSP_Ground_2, -1, ActionParams.DSP_Ground_2, 0x1E, GameAndWatchDSP.attacks_main_, -1, 0x800D8BB4, GameAndWatchDSP.ground_collision_)
+    Character.add_new_action(MRGAWTHREED, DSP_Air_2, 	-1, ActionParams.DSP_Air_2,    0x1E, GameAndWatchDSP.attacks_main_, -1, 0x800D90E0, GameAndWatchDSP.air_collision_)
+    Character.add_new_action(MRGAWTHREED, DSP_Ground_3, -1, ActionParams.DSP_Ground_3, 0x1E, GameAndWatchDSP.attacks_main_, -1, 0x800D8BB4, GameAndWatchDSP.ground_collision_)
+    Character.add_new_action(MRGAWTHREED, DSP_Air_3, 	-1, ActionParams.DSP_Air_3,    0x1E, GameAndWatchDSP.attacks_main_, -1, 0x800D90E0, GameAndWatchDSP.air_collision_)
+    Character.add_new_action(MRGAWTHREED, DSP_Ground_4, -1, ActionParams.DSP_Ground_4, 0x1E, GameAndWatchDSP.attacks_main_, -1, 0x800D8BB4, GameAndWatchDSP.ground_collision_)
+    Character.add_new_action(MRGAWTHREED, DSP_Air_4,    -1, ActionParams.DSP_Air_4,    0x1E, GameAndWatchDSP.attacks_main_, -1, 0x800D90E0, GameAndWatchDSP.air_collision_)
+    Character.add_new_action(MRGAWTHREED, DSP_Ground_5, -1, ActionParams.DSP_Ground_5, 0x1E, GameAndWatchDSP.attacks_main_, -1, 0x800D8BB4, GameAndWatchDSP.ground_collision_)
+    Character.add_new_action(MRGAWTHREED, DSP_Air_5, -1,    ActionParams.DSP_Air_5,    0x1E, GameAndWatchDSP.attacks_main_, -1, 0x800D90E0, GameAndWatchDSP.air_collision_)
+    Character.add_new_action(MRGAWTHREED, DSP_Ground_6, -1, ActionParams.DSP_Ground_6, 0x1E, GameAndWatchDSP.attacks_main_, -1, 0x800D8BB4, GameAndWatchDSP.ground_collision_)
+    Character.add_new_action(MRGAWTHREED, DSP_Air_6,    -1, ActionParams.DSP_Air_6,    0x1E, GameAndWatchDSP.attacks_main_, -1, 0x800D90E0, GameAndWatchDSP.air_collision_)
+    Character.add_new_action(MRGAWTHREED, DSP_Ground_7, -1, ActionParams.DSP_Ground_7, 0x1E, GameAndWatchDSP.attacks_main_, -1, 0x800D8BB4, GameAndWatchDSP.ground_collision_)
+    Character.add_new_action(MRGAWTHREED, DSP_Air_7, 	-1, ActionParams.DSP_Air_7,    0x1E, GameAndWatchDSP.attacks_main_, -1, 0x800D90E0, GameAndWatchDSP.air_collision_)
+    Character.add_new_action(MRGAWTHREED, DSP_Ground_8, -1, ActionParams.DSP_Ground_8, 0x1E, GameAndWatchDSP.attacks_main_, -1, 0x800D8BB4, GameAndWatchDSP.ground_collision_)
+    Character.add_new_action(MRGAWTHREED, DSP_Air_8,    -1, ActionParams.DSP_Air_8,    0x1E, GameAndWatchDSP.attacks_main_, -1, 0x800D90E0, GameAndWatchDSP.air_collision_)
+    Character.add_new_action(MRGAWTHREED, DSP_Ground_9, -1, ActionParams.DSP_Ground_9, 0x1E, GameAndWatchDSP.attacks_main_, -1, 0x800D8BB4, GameAndWatchDSP.ground_collision_)
+    Character.add_new_action(MRGAWTHREED, DSP_Air_9,    -1, ActionParams.DSP_Air_9,    0x1E, GameAndWatchDSP.attacks_main_, -1, 0x800D90E0, GameAndWatchDSP.air_collision_)
+    Character.add_new_action(MRGAWTHREED, USP_Float,    -1, ActionParams.USP_Float,    -1,   0x00000000, GameAndWatchUSP.float_interrupt_, GameAndWatchUSP.float_physics_, GameAndWatchUSP.float_collision_)
 																																			
 
     //GameAndWatchDSP.air_physics_ for all aerial versions

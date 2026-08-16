@@ -1,0 +1,22 @@
+dkshared-kirby_power_check_flash_:
+  path: 'src/dkshared.asm'
+  line: [
+    "beq     v1, at, j_0x800E9A18        // original line 1, modified to use jump",
+    "lli     at, Character.id.DKULT      // at = DKULT",
+  ]
+  prefix: "\t\t"
+  suffix: "\n\t\t"
+  type: BeforeFirst
+  where: 'beq     v1, at, j_0x800E9A18        // if JDK, take DK branch'
+
+dkshared-kirby_power_change_:
+  path: 'src/dkshared.asm'
+  line: [
+    "beq     v0, at, j_0x80161EF0        // original line 1, modified to use jump",
+    "lli     at, Character.id.DKULT      // at = DKULT"
+
+  ]
+  prefix: "\t\t"
+  suffix: "\n\t\t"
+  type: BeforeFirst
+  where: 'beq     v0, at, j_0x80161EF0        // if JDK, take DK branch'

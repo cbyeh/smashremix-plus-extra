@@ -1293,142 +1293,163 @@ scope GameAndWatchDSP {
     // Main subroutine for DSP_Begin
     // Picks a random number, then changes to that move
     scope main: {
-        addiu   sp, sp,-0x0040              // allocate stack space
-        sw      ra, 0x0014(sp)              // store ra
-		sw      a0, 0x0018(sp)
-		jal     Global.get_random_int_safe_	// v0 = random number (from 0 to 8)
-        lli   	a0, 000009
+	addiu   sp, sp,-0x0040              // allocate stack space
+	sw      ra, 0x0014(sp)              // store ra
+	sw      a0, 0x0018(sp)
+	sw      s0, 0x0020(sp)
+	jal     Global.get_random_int_safe_	// v0 = random number (from 0 to 8)
+	lli   	a0, 000009
 
-		// set these to use later for determining which move to use
-		// then jump to the appropriate function
-		or      a2, r0, r0                  // a2(starting frame) = 0
+	// set these to use later for determining which move to use
+	// then jump to the appropriate function
+	or      a2, r0, r0                  // a2(starting frame) = 0
         lui     a3, 0x3F80                  // a3(frame speed multiplier) = 1.0
 
-		beqz	v0, _judge_1
-		nop
-		addiu	v0, -1
-		beqz	v0, _judge_2
-		nop
-		addiu	v0, -1
-		beqz	v0, _judge_3
-		nop
-		addiu	v0, -1
-		beqz	v0, _judge_4
-		nop
-		addiu	v0, -1
-		beqz	v0, _judge_5
-		nop
-		addiu	v0, -1
-		beqz	v0, _judge_6
-		nop
-		addiu	v0, -1
-		beqz	v0, _judge_7
-		nop
-		addiu	v0, -1
-		beqz	v0, _judge_8
-		nop
-		addiu	v0, -1
-		beqz	v0, _judge_9
+	beqz	v0, _judge_1
+	nop
+	addiu	v0, -1
+	beqz	v0, _judge_2
+	nop
+	addiu	v0, -1
+	beqz	v0, _judge_3
+	nop
+	addiu	v0, -1
+	beqz	v0, _judge_4
+	nop
+	addiu	v0, -1
+	beqz	v0, _judge_5
+	nop
+	addiu	v0, -1
+	beqz	v0, _judge_6
+	nop
+	addiu	v0, -1
+	beqz	v0, _judge_7
+	nop
+	addiu	v0, -1
+	beqz	v0, _judge_8
+	nop
+	addiu	v0, -1
+	beqz	v0, _judge_9
+	nop
 
-		_judge_1:
-		lli     a1, Action.DSP_Ground_1          // a1(action id) = DSP
-		lw      t0, 0x0014C(s0)                 			  // get aerial flag
-		beqz	t0, _change_action							  // if grounded, change to grounded 1 state
-		nop
-		lli     a1, Action.DSP_Air_1          	  // a1(action id) = DSP
-		beq		r0, r0, _change_action						  // if aerial, change to aerial 1 state
-		nop
+	_judge_1:
+	lli     a1, Action.DSP_Ground_1     // a1(action id) = DSP
+	lw      a0, 0x0018(sp)
+	lw      t1, 0x0084(a0)              // t1 = player struct
+	lw      t0, 0x0014C(t1)             // get aerial flag
+	beqz	t0, _change_action          // if grounded, change to grounded 1 state
+	nop
+	lli     a1, Action.DSP_Air_1        // a1(action id) = DSP
+	beq	r0, r0, _change_action      // if aerial, change to aerial 1 state
+	nop
 
-		_judge_2:
-		lli     a1, Action.DSP_Ground_2
-		lw      t0, 0x0014C(s0)
-		beqz	t0, _change_action
-		nop
-		lli     a1, Action.DSP_Air_2
-		beq		r0, r0, _change_action
-		nop
+	_judge_2:
+	lli     a1, Action.DSP_Ground_2
+	lw      a0, 0x0018(sp)
+	lw      t1, 0x0084(a0)
+	lw      t0, 0x0014C(t1)
+	beqz	t0, _change_action
+	nop
+	lli     a1, Action.DSP_Air_2
+	beq	r0, r0, _change_action
+	nop
 
-		_judge_3:
-		lli     a1, Action.DSP_Ground_3
-		lw      t0, 0x0014C(s0)
-		beqz	t0, _change_action
-		nop
-		lli     a1, Action.DSP_Air_3
-		beq		r0, r0, _change_action
-		nop
+	_judge_3:
+	lli     a1, Action.DSP_Ground_3
+	lw      a0, 0x0018(sp)
+	lw      t1, 0x0084(a0)
+	lw      t0, 0x0014C(t1)
+	beqz	t0, _change_action
+	nop
+	lli     a1, Action.DSP_Air_3
+	beq	r0, r0, _change_action
+	nop
 
-		_judge_4:
-		lli     a1, Action.DSP_Ground_4
-		lw      t0, 0x0014C(s0)
-		beqz	t0, _change_action
-		nop
-		lli     a1, Action.DSP_Air_4
-		beq		r0, r0, _change_action
-		nop
+	_judge_4:
+	lli     a1, Action.DSP_Ground_4
+	lw      a0, 0x0018(sp)
+	lw      t1, 0x0084(a0)
+	lw      t0, 0x0014C(t1)
+	beqz	t0, _change_action
+	nop
+	lli     a1, Action.DSP_Air_4
+	beq	r0, r0, _change_action
+	nop
 
-		_judge_5:
-		lli     a1, Action.DSP_Ground_5
-		lw      t0, 0x0014C(s0)
-		beqz	t0, _change_action
-		nop
-		lli     a1, Action.DSP_Air_5
-		beq		r0, r0, _change_action
-		nop
+	_judge_5:
+	lli     a1, Action.DSP_Ground_5
+	lw      a0, 0x0018(sp)
+	lw      t1, 0x0084(a0)
+	lw      t0, 0x0014C(t1)
+	beqz	t0, _change_action
+	nop
+	lli     a1, Action.DSP_Air_5
+	beq	r0, r0, _change_action
+	nop
 
-		_judge_6:
-		lli     a1, Action.DSP_Ground_6
-		lw      t0, 0x0014C(s0)
-		beqz	t0, _change_action
-		nop
-		lli     a1, Action.DSP_Air_6
-		beq		r0, r0, _change_action
-		nop
+	_judge_6:
+	lli     a1, Action.DSP_Ground_6
+	lw      a0, 0x0018(sp)
+	lw      t1, 0x0084(a0)
+	lw      t0, 0x0014C(t1)
+	beqz	t0, _change_action
+	nop
+	lli     a1, Action.DSP_Air_6
+	beq	r0, r0, _change_action
+	nop
 
-		_judge_7:
-		lli     a1, Action.DSP_Ground_7
-		lw      t0, 0x0014C(s0)
-		beqz	t0, _change_action
-		nop
-		lli     a1, Action.DSP_Air_7
-		beq		r0, r0, _change_action
-		nop
+	_judge_7:
+	lli     a1, Action.DSP_Ground_7
+	lw      a0, 0x0018(sp)
+	lw      t1, 0x0084(a0)
+	lw      t0, 0x0014C(t1)
+	beqz	t0, _change_action
+	nop
+	lli     a1, Action.DSP_Air_7
+	beq	r0, r0, _change_action
+	nop
 
-		_judge_8:
-		lli     a1, Action.DSP_Ground_8
-		lw      t0, 0x0014C(s0)
-		beqz	t0, _change_action
-		nop
-		lli     a1, Action.DSP_Air_8
-		beq		r0, r0, _change_action
-		nop
+	_judge_8:
+	lli     a1, Action.DSP_Ground_8
+	lw      a0, 0x0018(sp)
+	lw      t1, 0x0084(a0)
+	lw      t0, 0x0014C(t1)
+	beqz	t0, _change_action
+	nop
+	lli     a1, Action.DSP_Air_8
+	beq	r0, r0, _change_action
+	nop
 
-		_judge_9:
-		lli     a1, Action.DSP_Ground_9
-		lw      t0, 0x0014C(s0)
-		beqz	t0, _change_action
-		nop
-		lli     a1, Action.DSP_Air_9
-		beq		r0, r0, _change_action
-		nop
+	_judge_9:
+	lli     a1, Action.DSP_Ground_9
+	lw      a0, 0x0018(sp)
+	lw      t1, 0x0084(a0)
+	lw      t0, 0x0014C(t1)
+	beqz	t0, _change_action
+	nop
+	lli     a1, Action.DSP_Air_9
+	beq	r0, r0, _change_action
+	nop
 
-		_change_action:
-		lw      a0, 0x0018(sp)              // a0 = player object
-        jal     0x800E6F24                  // change action
-        sw      r0, 0x0010(sp)              // argument 4 = 0
-        lw      a0, 0x0018(sp)              // a0 = player object
-        jal     0x800E0830                  // unknown common subroutine
-        lw      a0, 0x0018(sp)              // a0 = player object
+	_change_action:
+	lw      a0, 0x0018(sp)              // a0 = player object
+	jal     0x800E6F24                  // change action
+	sw      r0, 0x0010(sp)              // argument 4 = 0
+	lw      a0, 0x0018(sp)              // a0 = player object
+	jal     0x800E0830                  // unknown common subroutine
+	lw      a0, 0x0018(sp)              // a0 = player object
 
+	//_release:
+	nop
+	b       _end
+	nop
 
-        //_release:
-        nop
-        b       _end
-        nop
-
-        _end:
-        lw      ra, 0x0014(sp)              // load ra
-        jr      ra                          // return
-        addiu   sp, sp, 0x0040              // deallocate stack space
+	_end:
+	lw      s0, 0x0020(sp)
+	lw      a0, 0x0018(sp)
+	lw      ra, 0x0014(sp)              // load ra
+	jr      ra                          // return
+	addiu   sp, sp, 0x0040              // deallocate stack space
     }
 
     // @ Description

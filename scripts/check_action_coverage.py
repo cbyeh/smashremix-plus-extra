@@ -3,6 +3,14 @@ import re
 import argparse
 from collections import defaultdict
 
+# The bundled smashremix submodule, resolved relative to this file rather
+# than a hardcoded "smashremix/src", since a caller may pull this script in
+# from a different working directory (e.g. a content repo that has this
+# repo as a submodule under some other name than "smashremix").
+BUNDLED_SMASHREMIX_SRC = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "smashremix", "src")
+
 unused_actions = [
     0x4, 0x6, 0xE, 0xC6, 0xC8
 ]
@@ -58,7 +66,7 @@ def get_shared_animation_reuse_map(actions, min_shared=3):
     )
     animation_to_actions = defaultdict(set)
 
-    for src_dir in ["src", "smashremix/src"]:
+    for src_dir in ["src", BUNDLED_SMASHREMIX_SRC]:
         if not os.path.isdir(src_dir):
             continue
         for root, _, files in os.walk(src_dir):
@@ -154,7 +162,7 @@ def get_all_used_actions_in_src(actions):
     )
     found = set()
 
-    for src_dir in ["src", "smashremix/src"]:
+    for src_dir in ["src", BUNDLED_SMASHREMIX_SRC]:
         if not os.path.isdir(src_dir):
             continue
         for root, _, files in os.walk(src_dir):

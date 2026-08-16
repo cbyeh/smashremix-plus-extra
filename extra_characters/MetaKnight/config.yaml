@@ -8,6 +8,8 @@ definitions:
   series_logo_css: KIRBY
   series_logo_model: KIRBY
   select_pose: 4
+  break_the_targets: KIRBY
+  board_the_platforms: KIRBY
 
 name: "Meta Knight"
 num_costumes: 6
@@ -45,10 +47,10 @@ attributes:
   attack_sfx_2: "FFE3"
   attack_sfx_3: "FFE4"
   heavy_lift_fgm: "FFF7"
-  aerial_jump_height: 0.7
-  base_jump_height: 25
+  aerial_jump_height: 0.8
+  base_jump_height: 18
   jump_height_multi: 0.78
-  gravity: 3
+  gravity: 2.6
   forward_throw_animation: "0xB8"
   back_throw_animation: "0xB8"
   dash_run_frames: 12
@@ -79,6 +81,17 @@ sounds:
   "FFE6": AnnouncerMeta
   "FFE7": entrysword
   "FFE8": entryspin
+  "FFE9": chant
+  "FFEA": dspvanish
+  "FFEB": dspreappear
+
+sounds_special:
+  "FFE9":
+    fgm_type: CHANT
+    length: 260
+  "FFFD":
+    fgm_type: SLEEP
+    length: "0x120"
 
 announcer_fgm: "FFE6"
 

@@ -14,6 +14,44 @@ scope Cloud {
 	
 	insert RUN_,"moveset/RUN.bin"; Moveset.GO_TO(RUN_) // loops
 
+    // Item moveset definitions, copied from Peach as a starting point for hand-tuning timings.
+    LIGHT_ITEM_PICKUP:; dw 0xBC000003;  dw 0x08000004; dw 0x3800009D; dw 0x58000001; dw 0
+    ITEM_DROP:; dw 0xBC000003;  dw 0x08000009; dw 0x54000001; dw 0
+    ITEM_THROW_DASH:; dw 0x08000005; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW_DASH); dw 0
+    ITEM_THROW_F:; dw 0xBC000003; dw 0x08000007; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW); dw 0
+    ITEM_THROW_B:; dw 0xBC000003; dw 0x60000008; dw 0x08000007; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW); dw 0
+    ITEM_THROW_U:; dw 0xBC000003; dw 0x0800000C; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW); dw 0
+    ITEM_THROW_D:; dw 0xBC000003; dw 0x08000007; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW); dw 0
+    ITEM_THROW_SMASH_F:; dw 0xBC000003; dw 0x08000007; dw 0x50000000; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW); dw 0
+    ITEM_THROW_SMASH_B:; dw 0xBC000003; dw 0x60000008; dw 0x08000007; dw 0x50000000; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW); dw 0
+    ITEM_THROW_SMASH_U:; dw 0xBC000003; dw 0x0800000C; dw 0x50000000; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW); dw 0
+    ITEM_THROW_SMASH_D:; dw 0xBC000003; dw 0x08000007; dw 0x50000000; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW); dw 0
+    ITEM_THROW_AIR_F:; dw 0xBC000003; dw 0x08000007; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW); dw 0
+    ITEM_THROW_AIR_B:; dw 0xBC000003; dw 0x60000004; dw 0x08000007; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW); dw 0
+    ITEM_THROW_AIR_U:; dw 0xBC000003; dw 0x0800000C; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW); dw 0
+    ITEM_THROW_AIR_D:; dw 0xBC000003; dw 0x08000006; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW); dw 0
+    ITEM_THROW_AIR_SMASH_F:; dw 0xBC000003; dw 0x08000007; dw 0x50000000; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW_AIR_SMASH_FB); dw 0
+    ITEM_THROW_AIR_SMASH_B:; dw 0xBC000003; dw 0x60000006; dw 0x08000007; dw 0x50000000; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW_AIR_SMASH_FB); dw 0
+    ITEM_THROW_AIR_SMASH_U:; dw 0xBC000003; dw 0x0800000C; dw 0x50000000; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW_SMASH_UD); dw 0
+    ITEM_THROW_AIR_SMASH_D:; dw 0xBC000003; dw 0x08000006; dw 0x50000000; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW_SMASH_UD); dw 0
+    BEAMSWORD_JAB:; dw 0xBC000003; dw 0x08000003; dw 0xCC040000; dw 0x08000004; Moveset.SUBROUTINE(Moveset.shared.BEAMSWORD_JAB); dw 0x04000002; dw 0x18000000; dw 0x04000004; dw 0xCC03FFFF; dw 0
+    BEAMSWORD_TILT:; dw 0xBC000003; dw 0x6000000A; dw 0x08000006; dw 0xBC000004; dw 0xCC040000; dw 0x08000007; Moveset.SUBROUTINE(Moveset.shared.BEAMSWORD_TILT); dw 0x04000006; dw 0x18000000; dw 0xCC03FFFF; dw 0x08000026; dw 0xBC000003; dw 0
+    BEAMSWORD_SMASH:; dw 0xBC000003; dw 0x0800000D; dw 0xCC040000; dw 0x0800000E; dw 0xBC000004; dw 0x50000000; dw 0x0800000E; Moveset.SUBROUTINE(Moveset.shared.BEAMSWORD_SMASH); dw 0x04000005; dw 0x18000000; dw 0x04000005; dw 0xCC03FFFF; dw 0x0800002D; dw 0xBC000003; dw 0
+    BEAMSWORD_DASH:; dw 0xBC000004; dw 0xCC040000; dw 0x08000007; Moveset.SUBROUTINE(Moveset.shared.BEAMSWORD_DASH); dw 0x04000003; dw 0xCC03FFFF; dw 0x0400000F; dw 0x18000000; dw 0x08000020; dw 0xBC000003; dw 0
+    BAT_JAB:; dw 0xBC000003; dw 0x08000004; Moveset.SUBROUTINE(Moveset.shared.BAT_JAB); dw 0x04000002; dw 0x18000000; dw 0
+    BAT_TILT:; dw 0xBC000003; dw 0x08000006; dw 0xBC000004; dw 0x08000007; Moveset.SUBROUTINE(Moveset.shared.BAT_TILT); dw 0x04000006; dw 0x18000000; dw 0x08000026; dw 0xBC000003; dw 0
+    BAT_SMASH:; dw 0xC4000007; dw 0xBC000003; dw 0xB1300028; dw 0x0800000E; dw 0xBC000004; dw 0x50000000; dw 0x0800000E; Moveset.SUBROUTINE(Moveset.shared.BAT_SMASH); dw 0x04000005; dw 0x18000000; dw 0x0800002D; dw 0xBC000003; dw 0
+    BAT_DASH:; dw 0xBC000004; dw 0x08000007; Moveset.SUBROUTINE(Moveset.shared.BAT_DASH); dw 0x04000012; dw 0x18000000; dw 0x08000020; dw 0xBC000003; dw 0
+    FAN_JAB:; dw 0xBC000003; dw 0x08000004; Moveset.SUBROUTINE(Moveset.shared.FAN_JAB); dw 0x04000002; dw 0x18000000; dw 0
+    FAN_TILT:; dw 0xBC000003; dw 0x08000006; dw 0xBC000004; dw 0x08000007; Moveset.SUBROUTINE(Moveset.shared.FAN_TILT); dw 0x04000006; dw 0x18000000; dw 0x08000026; dw 0xBC000003; dw 0
+    FAN_SMASH:; dw 0xBC000003; dw 0x0800000E; dw 0xBC000004; dw 0x50000000; dw 0x0800000E; Moveset.SUBROUTINE(Moveset.shared.FAN_SMASH); dw 0x04000005; dw 0x18000000; dw 0x0800002D; dw 0xBC000003; dw 0
+    FAN_DASH:; dw 0xBC000004; dw 0x08000007; Moveset.SUBROUTINE(Moveset.shared.FAN_DASH); dw 0x04000012; dw 0x18000000; dw 0x08000020; dw 0xBC000003; dw 0
+    STARROD_JAB:; dw 0xBC000003; dw 0xB12C0010; dw 0x08000004; Moveset.SUBROUTINE(Moveset.shared.STARROD_JAB); dw 0x04000002; dw 0x18000000; dw 0
+    STARROD_TILT:; dw 0xBC000003; dw 0x08000006; dw 0xBC000004; dw 0xB12C000D; dw 0x08000007; Moveset.SUBROUTINE(Moveset.shared.STARROD_TILT); dw 0x04000001; dw 0x54000001; dw 0x04000002; dw 0x18000000;  dw 0x08000026; dw 0xBC000003; dw 0
+    STARROD_SMASH:; dw 0xBC000003; dw 0x0800000E; dw 0xBC000004; dw 0xB12C0024; dw 0x50000000; dw 0x0800000E; Moveset.SUBROUTINE(Moveset.shared.STARROD_SMASH); dw 0x0800000F; dw 0x54000002; dw 0x04000005; dw 0x18000000; dw 0x0800002D; dw 0xBC000003; dw 0
+    STARROD_DASH:; dw 0xBC000004; dw 0xB12C0014; dw 0x08000007; Moveset.SUBROUTINE(Moveset.shared.STARROD_DASH); dw 0x04000012; dw 0x18000000; dw 0x08000020; dw 0xBC000003; dw 0
+    HAMMER:; dw 0xC4000007; dw 0xBC000004; dw 0xAC000001; dw 0xAC100001; Moveset.SUBROUTINE(Moveset.shared.HAMMER); dw 0x04000010; dw 0x18000000; Moveset.GO_TO(HAMMER)
+
     // Modify Action Parameters             // Action                 // Animation                      // Moveset Data // Flags
     Character.edit_action_parameters(CLOUD, Action.Entry,             File.CLOUD_ANIM_IDLE,             -1,             -1)
     Character.edit_action_parameters(CLOUD, Action.ReviveWait,        File.CLOUD_ANIM_IDLE,             -1,             -1)
@@ -52,12 +90,13 @@ scope Cloud {
     Character.edit_action_parameters(CLOUD, Action.ThrowF,            File.CLOUD_ANIM_THROWF,           CUSTOM_THROWF,  -1)
     Character.edit_action_parameters(CLOUD, Action.ThrowB,            File.CLOUD_ANIM_THROWB,           CUSTOM_THROWB,  -1)
     Character.edit_action_parameters(CLOUD, Action.ClangRecoil,       File.CLOUD_ANIM_CLANGREBOUND,     -1,             -1)
-    Character.edit_action_parameters(CLOUD, Action.TechF,             -1,                               TECHFROLL,      -1)
-    Character.edit_action_parameters(CLOUD, Action.TechB,             -1,                               TECHFROLL,      -1)
-    Character.edit_action_parameters(CLOUD, Action.Tech,              -1,                               TECHSTAND,      -1)
+    Character.edit_action_parameters(CLOUD, Action.TechF,             File.CLOUD_ANIM_TECHF,            TECHFROLL,      -1)
+    Character.edit_action_parameters(CLOUD, Action.TechB,             File.CLOUD_ANIM_TECHB,            TECHFROLL,      -1)
+    Character.edit_action_parameters(CLOUD, Action.Tech,              File.CLOUD_ANIM_TECH,             TECHSTAND,      -1)
     Character.edit_action_parameters(CLOUD, Action.CliffAttackQuick2, -1,                               CLIFFATKQUICK,  -1)
     Character.edit_action_parameters(CLOUD, Action.CliffAttackSlow2,  -1,                               CLIFFATKSLOW,   -1)
-    Character.edit_action_parameters(CLOUD, Action.Teeter,            -1,                               TEETER,         -1)
+    Character.edit_action_parameters(CLOUD, Action.Teeter,            File.CLOUD_ANIM_TEETERLOOP,       TEETER,         -1)
+    Character.edit_action_parameters(CLOUD, Action.TeeterStart,       File.CLOUD_ANIM_TEETERSTART,      -1,             -1)
     Character.edit_action_parameters(CLOUD, Action.Jab1,              File.CLOUD_ANIM_JAB1,             JAB1,           0x00000000)
     Character.edit_action_parameters(CLOUD, Action.Jab2,              File.CLOUD_ANIM_JAB2,             JAB2,           0x40000000)
     Character.edit_action_parameters(CLOUD, 0xDC,                     File.CLOUD_ANIM_JAB3,             JAB3,           0x40000000)
@@ -102,23 +141,71 @@ scope Cloud {
     Character.edit_action_parameters(CLOUD, Action.DamageFlyRoll,     File.CLOUD_ANIM_DAMAGEFLYROLL,    -1,             -1)
     Character.edit_action_parameters(CLOUD, Action.DamageFlyTop,      File.CLOUD_ANIM_DAMAGEFLYTOP,     -1,             -1)
     Character.edit_action_parameters(CLOUD, Action.ShieldBreak,       -1,                               SHIELDBREAK_,   -1)
-    Character.edit_action_parameters(CLOUD, Action.Stun,              -1,                               STUN_,          -1)
-    Character.edit_action_parameters(CLOUD, Action.Sleep,             -1,                               SLEEP_,         -1)
+    Character.edit_action_parameters(CLOUD, Action.Stun,              File.CLOUD_ANIM_STUN,             STUN_,          -1)
+    Character.edit_action_parameters(CLOUD, Action.Sleep,             File.CLOUD_ANIM_STUN,             SLEEP_,         -1)
     Character.edit_action_parameters(CLOUD, 0xE0,            File.CLOUD_ANIM_ENTRYR,           ENTRY,          0xC0000008)
     Character.edit_action_parameters(CLOUD, 0xE1,            File.CLOUD_ANIM_ENTRYL,           ENTRY,          0xC0000008)
     
 
     Character.edit_action_parameters(CLOUD, Action.DownAttackD, File.CLOUD_ANIM_DOWNATTACKD, -1, -1)
     Character.edit_action_parameters(CLOUD, Action.DownAttackU, File.CLOUD_ANIM_DOWNATTACKU, -1, -1)
+    Character.edit_action_parameters(CLOUD, Action.DownBounceD, File.CLOUD_ANIM_DOWNBOUNDD, -1, -1)
+    Character.edit_action_parameters(CLOUD, Action.DownBounceU, File.CLOUD_ANIM_DOWNBOUNDU, -1, -1)
     Character.edit_action_parameters(CLOUD, Action.DownStandD, File.CLOUD_ANIM_DOWNSTANDD, -1, -1);
     Character.edit_action_parameters(CLOUD, Action.DownStandU, File.CLOUD_ANIM_DOWNSTANDU, -1, -1);
-    // Character.edit_action_parameters(CLOUD, Action.Tech, File.CLOUD_ANIM_TECH, -1, -1);
-    // Character.edit_action_parameters(CLOUD, Action.TechF, File.CLOUD_ANIM_TECHF, -1, -1)
-    // Character.edit_action_parameters(CLOUD, Action.TechB, File.CLOUD_ANIM_TECHB, -1, -1)
     Character.edit_action_parameters(CLOUD, Action.DownForwardD, File.CLOUD_ANIM_DOWNFORWARDD, -1, -1)
     Character.edit_action_parameters(CLOUD, Action.DownForwardU, File.CLOUD_ANIM_DOWNFORWARDU, -1, -1)
     Character.edit_action_parameters(CLOUD, Action.DownBackD, File.CLOUD_ANIM_DOWNBACKD, -1, -1)
     Character.edit_action_parameters(CLOUD, Action.DownBackU, File.CLOUD_ANIM_DOWNBACKU, -1, -1)
+
+    Character.edit_action_parameters(CLOUD, Action.LightItemPickup,    File.CLOUD_ANIM_LIGHTGET,        LIGHT_ITEM_PICKUP,       -1)
+    Character.edit_action_parameters(CLOUD, Action.ItemDrop,           File.CLOUD_ANIM_LIGHTDROP,       ITEM_DROP,                -1)
+    Character.edit_action_parameters(CLOUD, Action.ItemThrowDash,      File.CLOUD_ANIM_LIGHTTHROWDASH,  ITEM_THROW_DASH,          -1)
+    Character.edit_action_parameters(CLOUD, Action.ItemThrowF,         File.CLOUD_ANIM_LIGHTTHROWF,     ITEM_THROW_F,             -1)
+    Character.edit_action_parameters(CLOUD, Action.ItemThrowB,         File.CLOUD_ANIM_LIGHTTHROWF,     ITEM_THROW_B,             -1)
+    Character.edit_action_parameters(CLOUD, Action.ItemThrowU,         File.CLOUD_ANIM_LIGHTTHROWU,     ITEM_THROW_U,             -1)
+    Character.edit_action_parameters(CLOUD, Action.ItemThrowD,         File.CLOUD_ANIM_LIGHTTHROWD,     ITEM_THROW_D,             -1)
+    Character.edit_action_parameters(CLOUD, Action.ItemThrowSmashF,    File.CLOUD_ANIM_LIGHTTHROWF,     ITEM_THROW_SMASH_F,       -1)
+    Character.edit_action_parameters(CLOUD, Action.ItemThrowSmashB,    File.CLOUD_ANIM_LIGHTTHROWF,     ITEM_THROW_SMASH_B,       -1)
+    Character.edit_action_parameters(CLOUD, Action.ItemThrowSmashU,    File.CLOUD_ANIM_LIGHTTHROWU,     ITEM_THROW_SMASH_U,       -1)
+    Character.edit_action_parameters(CLOUD, Action.ItemThrowSmashD,    File.CLOUD_ANIM_LIGHTTHROWD,     ITEM_THROW_SMASH_D,       -1)
+    Character.edit_action_parameters(CLOUD, Action.ItemThrowAirF,      File.CLOUD_ANIM_LIGHTTHROWAIRF,  ITEM_THROW_AIR_F,         -1)
+    Character.edit_action_parameters(CLOUD, Action.ItemThrowAirB,      File.CLOUD_ANIM_LIGHTTHROWAIRF,  ITEM_THROW_AIR_B,         -1)
+    Character.edit_action_parameters(CLOUD, Action.ItemThrowAirU,      File.CLOUD_ANIM_LIGHTTHROWAIRU,  ITEM_THROW_AIR_U,         -1)
+    Character.edit_action_parameters(CLOUD, Action.ItemThrowAirD,      File.CLOUD_ANIM_LIGHTTHROWAIRD,  ITEM_THROW_AIR_D,         -1)
+    Character.edit_action_parameters(CLOUD, Action.ItemThrowAirSmashF, File.CLOUD_ANIM_LIGHTTHROWAIRF,  ITEM_THROW_AIR_SMASH_F,   -1)
+    Character.edit_action_parameters(CLOUD, Action.ItemThrowAirSmashB, File.CLOUD_ANIM_LIGHTTHROWAIRF,  ITEM_THROW_AIR_SMASH_B,   -1)
+    Character.edit_action_parameters(CLOUD, Action.ItemThrowAirSmashU, File.CLOUD_ANIM_LIGHTTHROWAIRU,  ITEM_THROW_AIR_SMASH_U,   -1)
+    Character.edit_action_parameters(CLOUD, Action.ItemThrowAirSmashD, File.CLOUD_ANIM_LIGHTTHROWAIRD,  ITEM_THROW_AIR_SMASH_D,   -1)
+
+    Character.edit_action_parameters(CLOUD, Action.RayGunShoot,        File.CLOUD_ANIM_SHOOT,           ITEM_SHOOT, 0x00000000)
+    Character.edit_action_parameters(CLOUD, Action.RayGunShootAir,     File.CLOUD_ANIM_SHOOTAIR,        ITEM_SHOOT, 0x00000000)
+    Character.edit_action_parameters(CLOUD, Action.FireFlowerShoot,    File.CLOUD_ANIM_SHOOT,           ITEM_SHOOT, 0x00000000)
+    Character.edit_action_parameters(CLOUD, Action.FireFlowerShootAir, File.CLOUD_ANIM_SHOOTAIR,        ITEM_SHOOT, 0x00000000)
+
+    Character.edit_action_parameters(CLOUD, Action.HammerIdle,         File.CLOUD_ANIM_HAMMERWALK,      HAMMER, -1)
+    Character.edit_action_parameters(CLOUD, Action.HammerWalk,         File.CLOUD_ANIM_HAMMERWALK,      HAMMER, -1)
+    Character.edit_action_parameters(CLOUD, Action.HammerTurn,         File.CLOUD_ANIM_HAMMERWALK,      HAMMER, -1)
+    Character.edit_action_parameters(CLOUD, Action.HammerJumpSquat,    File.CLOUD_ANIM_HAMMERWALK,      HAMMER, -1)
+    Character.edit_action_parameters(CLOUD, Action.HammerAir,          File.CLOUD_ANIM_HAMMERWALK,      HAMMER, -1)
+    Character.edit_action_parameters(CLOUD, Action.HammerLanding,      File.CLOUD_ANIM_HAMMERWALK,      HAMMER, -1)
+
+    Character.edit_action_parameters(CLOUD, Action.BeamSwordNeutral,   File.CLOUD_ANIM_SWING1,          BEAMSWORD_JAB,   -1)
+    Character.edit_action_parameters(CLOUD, Action.BeamSwordTilt,      File.CLOUD_ANIM_SWING3,          BEAMSWORD_TILT,  -1)
+    Character.edit_action_parameters(CLOUD, Action.BeamSwordSmash,     File.CLOUD_ANIM_SWING4,          BEAMSWORD_SMASH, -1)
+    Character.edit_action_parameters(CLOUD, Action.BeamSwordDash,      File.CLOUD_ANIM_SWINGDASH,       BEAMSWORD_DASH,  -1)
+    Character.edit_action_parameters(CLOUD, Action.BatNeutral,         File.CLOUD_ANIM_SWING1,          BAT_JAB,         -1)
+    Character.edit_action_parameters(CLOUD, Action.BatTilt,            File.CLOUD_ANIM_SWING3,          BAT_TILT,        -1)
+    Character.edit_action_parameters(CLOUD, Action.BatSmash,           File.CLOUD_ANIM_SWING4,          BAT_SMASH,       -1)
+    Character.edit_action_parameters(CLOUD, Action.BatDash,            File.CLOUD_ANIM_SWINGDASH,       BAT_DASH,        -1)
+    Character.edit_action_parameters(CLOUD, Action.FanNeutral,         File.CLOUD_ANIM_SWING1,          FAN_JAB,         -1)
+    Character.edit_action_parameters(CLOUD, Action.FanTilt,            File.CLOUD_ANIM_SWING3,          FAN_TILT,        -1)
+    Character.edit_action_parameters(CLOUD, Action.FanSmash,           File.CLOUD_ANIM_SWING4,          FAN_SMASH,       -1)
+    Character.edit_action_parameters(CLOUD, Action.FanDash,            File.CLOUD_ANIM_SWINGDASH,       FAN_DASH,        -1)
+    Character.edit_action_parameters(CLOUD, Action.StarRodNeutral,     File.CLOUD_ANIM_SWING1,          STARROD_JAB,     -1)
+    Character.edit_action_parameters(CLOUD, Action.StarRodTilt,        File.CLOUD_ANIM_SWING3,          STARROD_TILT,    -1)
+    Character.edit_action_parameters(CLOUD, Action.StarRodSmash,       File.CLOUD_ANIM_SWING4,          STARROD_SMASH,   -1)
+    Character.edit_action_parameters(CLOUD, Action.StarRodDash,        File.CLOUD_ANIM_SWINGDASH,       STARROD_DASH,    -1)
 
     // Modify Menu Action Parameters             // Action // Animation             // Moveset Data // Flags
     Character.edit_menu_action_parameters(CLOUD, 0x0,      File.CLOUD_ANIM_IDLE,    GRABPULL,       -1)

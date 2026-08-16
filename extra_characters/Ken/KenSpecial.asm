@@ -385,61 +385,83 @@ scope KenSpecial: {
         }
 
         // @ Description
-        // Subroutine which checks for valid targets for Sonic's homing attack.
+        // Finds the closest opponent, and separately the closest overall
+        // target (an opponent, or - whichever is actually closer - an item
+        // with an active hurtbox), for auto_turnaround and
+        // proximity_move_check respectively. Items can never affect the
+        // opponent-only result: it's captured before items are even
+        // searched, so auto_turnaround (which only ever turns towards an
+        // opponent) is completely unaffected by nearby items, while
+        // proximity_move_check still gets the true closest target of
+        // either kind.
         // a0 - player object
+        // returns
+        // v0 - closest overall target - opponent or item (NULL if none found)
+        // v1 - closest overall target's X_DIFF (signed distance, positive =
+        //      in front of the player's current facing direction)
+        // a1 - closest opponent (NULL if no opponent was found)
+        // a2 - closest opponent's X_DIFF
+        // a3 - number of opponents in the match (excludes self and teammates)
         scope check_for_targets_: {
             addiu sp, sp,-0x0050 // allocate stack space
             sw ra, 0x001C(sp) // ~
             sw s0, 0x0020(sp) // ~
             sw s1, 0x0024(sp) // ~
-            sw s2, 0x0028(sp) // store ra, s0-s2
+            sw s2, 0x0028(sp) // ~
+            sw s3, 0x002C(sp) // ~
+            sw s4, 0x0030(sp) // ~
+            sw s5, 0x0034(sp) // store ra, s0-s5
 
-            or v0, r0, r0 // Clean up return registers
-            or v1, r0, r0 // Clean up return registers
+            or v0, r0, r0 // clear return registers - v0 = target object = NULL
+            or v1, r0, r0 // clear return registers - v1 = target X_DIFF = 0
 
-            or s0, a0, r0 // s0 = Sonic player object
+            or s0, a0, r0 // s0 = this player's own player object
             li s1, 0x800466FC // s1 = player object head
             lw s1, 0x0000(s1) // s1 = first player object
-            lw s2, 0x0084(s0) // s2 = player struct
+            lw s2, 0x0084(s0) // s2 = this player's player struct
+            or s3, r0, r0 // s3 = opponent count, tallied by the loop below
 
+            // pass 1: look for the closest valid opponent among all players
             _player_loop:
             beqz s1, _player_loop_exit // exit loop when s1 no longer holds an object pointer
             nop
-            beql s1, s0, _player_loop // loop if player and target object match...
+            beql s1, s0, _player_loop // skip this player's own player object...
             lw s1, 0x0004(s1) // ...and load next object into s1
 
             _team_check:
             li t0, Global.match_info // ~
             lw t0, 0x0000(t0) // t0 = match info struct
             lbu t1, 0x0002(t0) // t1 = team battle flag
-            beqz t1, _action_check // branch if team battle flag = FALSE
+            beqz t1, _action_check // branch if this isn't a team battle
             lbu t1, 0x0009(t0) // t1 = team attack flag
-            bnez t1, _action_check // branch if team attack flag != FALSE
+            bnez t1, _action_check // branch if friendly fire is enabled
             nop
 
-            // if the match is a team battle with team attack disabled
+            // if the match is a team battle with team attack disabled,
+            // teammates aren't opponents - not counted, not a turnaround target
             lw t0, 0x0084(s1) // t0 = target player struct
             lbu t0, 0x000C(t0) // t0 = target team
-            lbu t1, 0x000C(s2) // t1 = player team
+            lbu t1, 0x000C(s2) // t1 = this player's team
             beq t0, t1, _player_loop_end // skip if player and target are on the same team
             nop
 
             _action_check:
+            addiu s3, s3, 0x0001 // opponent count++ (s1 is neither self nor a teammate at this point)
             lw t0, 0x0084(s1) // t0 = target player struct
             lw t0, 0x0024(t0) // t0 = target player action
             sltiu at, t0, 0x0007 // at = 1 if action id < 7, else at = 0
-            bnez at, _player_loop_end // skip if target action id < 7 (target is in a KO action)
+            bnez at, _player_loop_end // skip if target is in a dead/respawning action (id < 7)
             nop
 
             _target_check:
-            or a0, s2, r0 // a0 = player struct
+            or a0, s2, r0 // a0 = this player's player struct
             lw a1, 0x0074(s1) // a1 = target top joint struct
-            jal check_target_ // check_target_
+            jal check_target_ // check if target is in range and closer than the current best
             or a2, s1, r0 // a2 = target object struct
-            beqz v0, _player_loop_end // branch if no new target
+            beqz v0, _player_loop_end // branch if this target isn't a new best match
             nop
 
-            // if check_target_ returned a new valid target
+            // remember the new best opponent match so far
             sw v0, 0x0B18(s2) // store target object
             sw v1, 0x0B1C(s2) // store target X_DIFF
 
@@ -447,11 +469,16 @@ scope KenSpecial: {
             b _player_loop // loop
             lw s1, 0x0004(s1) // s1 = next object
 
+            // pass 1 is done - capture the best opponent match now, before
+            // pass 2 (items) gets a chance to overwrite it. auto_turnaround
+            // uses this opponent-only result, so items can never affect it
             _player_loop_exit:
-            lw t0, 0x0B18(s2) // t0 = target object
-            bnez t0, _end // end if there is a targeted object
-            nop
+            lw s4, 0x0B18(s2) // s4 = closest opponent (NULL if none found)
+            lw s5, 0x0B1C(s2) // s5 = closest opponent's X_DIFF
 
+            // pass 2: also check items, continuing the comparison from
+            // wherever pass 1 left off, so proximity_move_check can still
+            // get the true overall closest target (opponent or item)
             li s1, 0x80046700 // s1 = item object head
             lw s1, 0x0000(s1) // s1 = first item object
 
@@ -464,14 +491,14 @@ scope KenSpecial: {
             andi t0, t0, 0x0001 // t0 = 1 if hurtbox is enabled, else t0 = 0
             beqz t0, _item_loop_end // skip if item doesn't have an active hurtbox
             nop
-            or a0, s2, r0 // a0 = player struct
+            or a0, s2, r0 // a0 = this player's player struct
             lw a1, 0x0074(s1) // a1 = target top joint struct
-            jal check_target_ // check_target_
+            jal check_target_ // check if item is in range and closer than the current best
             or a2, s1, r0 // a2 = target object struct
-            beqz v0, _item_loop_end // branch if no new target
+            beqz v0, _item_loop_end // branch if this item isn't a new best match
             nop
 
-            // if check_target_ returned a new valid target
+            // remember the new overall best match so far
             sw v0, 0x0B18(s2) // store target object
             sw v1, 0x0B1C(s2) // store target X_DIFF
 
@@ -480,17 +507,31 @@ scope KenSpecial: {
             lw s1, 0x0004(s1) // s1 = next object
 
             _end:
+            // reload the overall best match rather than trusting v0/v1 to
+            // still hold it - the last check_target_ call made above may
+            // have rejected its candidate (returning NULL), which would
+            // otherwise clobber an earlier, still-valid winner
+            lw v0, 0x0B18(s2) // v0 = overall best target (opponent or item)
+            lw v1, 0x0B1C(s2) // v1 = overall best target's X_DIFF
+            or a1, s4, r0 // a1 = closest opponent
+            or a2, s5, r0 // a2 = closest opponent's X_DIFF
+            or a3, s3, r0 // a3 = opponent count
             lw ra, 0x001C(sp) // ~
             lw s0, 0x0020(sp) // ~
             lw s1, 0x0024(sp) // ~
-            lw s2, 0x0028(sp) // load ra, s0-s2
+            lw s2, 0x0028(sp) // ~
+            lw s3, 0x002C(sp) // ~
+            lw s4, 0x0030(sp) // ~
+            lw s5, 0x0034(sp) // load ra, s0-s5
             addiu sp, sp, 0x0050 // deallocate stack space
             jr ra // return
             nop
         }
 
         // @ Description
-        // Subroutine which checks if a potential target is in range for Sonic's homing attack.
+        // Helper for check_for_targets_ above. Checks whether a single
+        // candidate (a player or an item) is within range and, if so,
+        // whether it's closer than the current best match.
         // a0 - player struct
         // a1 - target top joint struct
         // a2 - target object struct
@@ -528,10 +569,15 @@ scope KenSpecial: {
             beq t0, r0, _check_y // branch if there is no current target
             lwc1 f8, 0x0B1C(a0) // f8 = current target X_DIFF
 
-            // compare X_DIFF to see if the previous target was within closer x proximity
-            c.le.s f10, f8 // ~
+            // compare by absolute distance, not signed X_DIFF - otherwise a
+            // target behind us (however far) would always beat a target in
+            // front of us (however close), since the search cone extends
+            // much further behind than in front
+            abs.s f14, f10 // f14 = abs(candidate X_DIFF)
+            abs.s f8, f8 // f8 = abs(current target X_DIFF)
+            c.le.s f14, f8 // ~
             nop // ~
-            bc1fl _end // end if prev X_DIFF =< current X_DIFF
+            bc1fl _end // end if the current target is closer or equal
             or v0, r0, r0 // return 0
 
             _check_y:
@@ -608,6 +654,13 @@ scope KenSpecial: {
             OS.routine_end(0x30)
         }
 
+        // @ Description
+        // Turns the player to face the nearest opponent found by
+        // check_for_targets_, if any. Items never factor into this at all -
+        // check_for_targets_ hands back the closest opponent separately
+        // from its overall (opponent-or-item) result, and this function
+        // only ever looks at the opponent-only one. Only actually turns
+        // around when there's exactly one opponent in the match.
         // a0 = player object
         scope auto_turnaround: {
             OS.routine_begin(0x20)
@@ -626,8 +679,11 @@ scope KenSpecial: {
             sw r0, 0x0B18(t0) // target = NULL
             sw r0, 0x0B1C(t0) // X_DIFF = 0
 
-            jal check_for_targets_ // check_for_targets_
+            jal check_for_targets_ // search for the nearest valid target
             nop
+
+            or t9, a1, r0 // t9 = closest opponent (copy out before a1 gets restored below)
+            or t8, a2, r0 // t8 = closest opponent's X_DIFF (copy out before a2 gets restored below)
 
             lw a0, 0x0004(sp) // ~
             lw a1, 0x0008(sp) // ~
@@ -638,11 +694,18 @@ scope KenSpecial: {
             sw t6, 0x0B18(t0) //
             sw t7, 0x0B1C(t0) // restore player struct variables
 
-            beq v0, r0, _end // branch if no target was found
+            beq t9, r0, _end // branch if no opponent was found
+            nop
+
+            // only actually turn around when there's exactly one opponent
+            // in the match - the target above is still found/reported (for
+            // other features) even when this doesn't apply
+            lli t7, 0x0001
+            bne a3, t7, _end
             nop
 
             // apply turnaround
-            mtc1 v1, f0 // f0 = xdiff
+            mtc1 t8, f0 // f0 = opponent's xdiff
             mtc1 r0, f2 // f2 = 0
             c.le.s f2, f0
             bc1t _end

@@ -85,6 +85,11 @@ scope MKnuckles {
     FAN_DASH:; dw 0xBC000004; dw 0x0800000A; Moveset.SUBROUTINE(Moveset.shared.FAN_DASH); dw 0x04000012; dw 0x18000000; dw 0x08000006; dw 0xBC000003; dw 0
     STARROD_DASH:; dw 0xBC000004; dw 0xB12C0014; dw 0x0800000A; Moveset.SUBROUTINE(Moveset.shared.STARROD_DASH); dw 0x04000005; dw 0x18000000; dw 0x08000006; dw 0xBC000003; dw 0
 
+    duo_moveset:
+    dw 0xAC000003   // Set Texture Form (Knuckles eyes)
+    dw 0xAC100004   // Set Texture Form (Knuckles Smile)
+    dw 0x00000000   // End
+
     // @ Description
     // Knuckles' Extra Actions
     scope Action {

@@ -7,6 +7,9 @@ definitions:
   base_character: DONKEY
   series_logo_css: DONKEY_KONG
   series_logo_model: DONKEY_KONG
+  kirby_hat: "TRUE"
+  break_the_targets: DONKEY_KONG
+  board_the_platforms: DONKEY_KONG
 
 dk_cargo: true
 
@@ -18,6 +21,7 @@ results:
   name_scale: 1
   name_x: 30
   wins_x: 180
+  win_bgm: "0x0E"
   
 # Files 6, 7, 8, 9
 # [Filename (without .bin), InternalFileTableOffsetBytes, InternalFileResourceOffsetBytes]

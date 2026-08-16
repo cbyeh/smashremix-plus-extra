@@ -26,6 +26,44 @@ scope Ken {
         insert "moveset/DSP_H.bin";
         Moveset.END()
 
+    // Item moveset definitions, copied from Cloud
+    LIGHT_ITEM_PICKUP:; dw 0xBC000003;  dw 0x08000004; dw 0x3800009D; dw 0x58000001; dw 0
+    ITEM_DROP:; dw 0xBC000003;  dw 0x08000009; dw 0x54000001; dw 0
+    ITEM_THROW_DASH:; dw 0x08000005; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW_DASH); dw 0
+    ITEM_THROW_F:; dw 0xBC000003; dw 0x08000008; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW); dw 0
+    ITEM_THROW_B:; dw 0xBC000003; dw 0x60000008; dw 0x08000008; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW); dw 0
+    ITEM_THROW_U:; dw 0xBC000003; dw 0x0800000C; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW); dw 0
+    ITEM_THROW_D:; dw 0xBC000003; dw 0x08000008; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW); dw 0
+    ITEM_THROW_SMASH_F:; dw 0xBC000003; dw 0x08000008; dw 0x50000000; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW); dw 0
+    ITEM_THROW_SMASH_B:; dw 0xBC000003; dw 0x60000008; dw 0x08000008; dw 0x50000000; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW); dw 0
+    ITEM_THROW_SMASH_U:; dw 0xBC000003; dw 0x0800000C; dw 0x50000000; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW); dw 0
+    ITEM_THROW_SMASH_D:; dw 0xBC000003; dw 0x08000008; dw 0x50000000; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW); dw 0
+    ITEM_THROW_AIR_F:; dw 0xBC000003; dw 0x08000008; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW); dw 0
+    ITEM_THROW_AIR_B:; dw 0xBC000003; dw 0x60000004; dw 0x08000008; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW); dw 0
+    ITEM_THROW_AIR_U:; dw 0xBC000003; dw 0x0800000C; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW); dw 0
+    ITEM_THROW_AIR_D:; dw 0xBC000003; dw 0x08000008; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW); dw 0
+    ITEM_THROW_AIR_SMASH_F:; dw 0xBC000003; dw 0x08000008; dw 0x50000000; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW_AIR_SMASH_FB); dw 0
+    ITEM_THROW_AIR_SMASH_B:; dw 0xBC000003; dw 0x60000006; dw 0x08000008; dw 0x50000000; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW_AIR_SMASH_FB); dw 0
+    ITEM_THROW_AIR_SMASH_U:; dw 0xBC000003; dw 0x0800000C; dw 0x50000000; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW_SMASH_UD); dw 0
+    ITEM_THROW_AIR_SMASH_D:; dw 0xBC000003; dw 0x08000008; dw 0x50000000; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW_SMASH_UD); dw 0
+    BEAMSWORD_JAB:; dw 0xBC000003; dw 0x08000003; dw 0xCC040000; dw 0x08000003; Moveset.SUBROUTINE(Moveset.shared.BEAMSWORD_JAB); dw 0x04000004; dw 0x18000000; dw 0x04000004; dw 0xCC03FFFF; dw 0
+    BEAMSWORD_TILT:; dw 0xBC000003; dw 0x6000000A; dw 0x08000006; dw 0xBC000004; dw 0xCC040000; dw 0x08000007; Moveset.SUBROUTINE(Moveset.shared.BEAMSWORD_TILT); dw 0x04000004; dw 0x18000000; dw 0xCC03FFFF; dw 0x08000026; dw 0xBC000003; dw 0
+    BEAMSWORD_SMASH:; dw 0xBC000003; dw 0x0800000D; dw 0xCC040000; dw 0x0800000E; dw 0xBC000004; dw 0x50000000; dw 0x0800000E; Moveset.SUBROUTINE(Moveset.shared.BEAMSWORD_SMASH); dw 0x04000004; dw 0x18000000; dw 0x04000005; dw 0xCC03FFFF; dw 0x0800002D; dw 0xBC000003; dw 0
+    BEAMSWORD_DASH:; dw 0xBC000004; dw 0xCC040000; dw 0x08000007; Moveset.SUBROUTINE(Moveset.shared.BEAMSWORD_DASH); dw 0x04000003; dw 0xCC03FFFF; dw 0x0400000F; dw 0x18000000; dw 0x08000020; dw 0xBC000003; dw 0
+    BAT_JAB:; dw 0xBC000003; dw 0x08000003; Moveset.SUBROUTINE(Moveset.shared.BAT_JAB); dw 0x04000004; dw 0x18000000; dw 0
+    BAT_TILT:; dw 0xBC000003; dw 0x08000006; dw 0xBC000004; dw 0x08000007; Moveset.SUBROUTINE(Moveset.shared.BAT_TILT); dw 0x04000004; dw 0x18000000; dw 0x08000026; dw 0xBC000003; dw 0
+    BAT_SMASH:; dw 0xC4000007; dw 0xBC000003; dw 0xB1300028; dw 0x0800000E; dw 0xBC000004; dw 0x50000000; dw 0x0800000E; Moveset.SUBROUTINE(Moveset.shared.BAT_SMASH); dw 0x04000004; dw 0x18000000; dw 0x0800002D; dw 0xBC000003; dw 0
+    BAT_DASH:; dw 0xBC000004; dw 0x08000007; Moveset.SUBROUTINE(Moveset.shared.BAT_DASH); dw 0x04000012; dw 0x18000000; dw 0x08000020; dw 0xBC000003; dw 0
+    FAN_JAB:; dw 0xBC000003; dw 0x08000003; Moveset.SUBROUTINE(Moveset.shared.FAN_JAB); dw 0x04000004; dw 0x18000000; dw 0
+    FAN_TILT:; dw 0xBC000003; dw 0x08000006; dw 0xBC000004; dw 0x08000007; Moveset.SUBROUTINE(Moveset.shared.FAN_TILT); dw 0x04000004; dw 0x18000000; dw 0x08000026; dw 0xBC000003; dw 0
+    FAN_SMASH:; dw 0xBC000003; dw 0x0800000E; dw 0xBC000004; dw 0x50000000; dw 0x0800000E; Moveset.SUBROUTINE(Moveset.shared.FAN_SMASH); dw 0x04000004; dw 0x18000000; dw 0x0800002D; dw 0xBC000003; dw 0
+    FAN_DASH:; dw 0xBC000004; dw 0x08000007; Moveset.SUBROUTINE(Moveset.shared.FAN_DASH); dw 0x04000012; dw 0x18000000; dw 0x08000020; dw 0xBC000003; dw 0
+    STARROD_JAB:; dw 0xBC000003; dw 0xB12C0010; dw 0x08000003; Moveset.SUBROUTINE(Moveset.shared.STARROD_JAB); dw 0x04000004; dw 0x18000000; dw 0
+    STARROD_TILT:; dw 0xBC000003; dw 0x08000006; dw 0xBC000004; dw 0xB12C000D; dw 0x08000007; Moveset.SUBROUTINE(Moveset.shared.STARROD_TILT); dw 0x04000001; dw 0x54000001; dw 0x04000000; dw 0x18000000;  dw 0x08000026; dw 0xBC000003; dw 0
+    STARROD_SMASH:; dw 0xBC000003; dw 0x0800000E; dw 0xBC000004; dw 0xB12C0024; dw 0x50000000; dw 0x0800000E; Moveset.SUBROUTINE(Moveset.shared.STARROD_SMASH); dw 0x0800000F; dw 0x54000002; dw 0x04000004; dw 0x18000000; dw 0x0800002D; dw 0xBC000003; dw 0
+    STARROD_DASH:; dw 0xBC000004; dw 0xB12C0014; dw 0x08000007; Moveset.SUBROUTINE(Moveset.shared.STARROD_DASH); dw 0x04000012; dw 0x18000000; dw 0x08000020; dw 0xBC000003; dw 0
+    HAMMER:; dw 0xC4000007; dw 0xBC000004; dw 0xAC000001; dw 0xAC100001; Moveset.SUBROUTINE(Moveset.shared.HAMMER); dw 0x04000010; dw 0x18000000; Moveset.GO_TO(HAMMER)
+
     // Modify Action Parameters // Action // Animation // Moveset Data // Flags
     Character.edit_action_parameters(KEN, Action.Entry, File.KEN_ANIM_IDLE, IDLE, -1)
     Character.edit_action_parameters(KEN, 0x006, File.KEN_ANIM_IDLE, IDLE, -1)
@@ -36,8 +74,8 @@ scope Ken {
     Character.edit_action_parameters(KEN, Action.Walk1, File.KEN_ANIM_WALK1, -1, -1)
     Character.edit_action_parameters(KEN, Action.Walk2, File.KEN_ANIM_WALK2, -1, -1)
     Character.edit_action_parameters(KEN, Action.Walk3, File.KEN_ANIM_WALK3, -1, -1)
-    Character.edit_action_parameters(KEN, Action.Teeter, -1, IDLE, -1)
-    Character.edit_action_parameters(KEN, Action.TeeterStart, -1, IDLE, -1)
+    Character.edit_action_parameters(KEN, Action.Teeter, File.KEN_ANIM_TEETER, IDLE, -1)
+    Character.edit_action_parameters(KEN, Action.TeeterStart, File.KEN_ANIM_TEETERSTART, IDLE, -1)
     Character.edit_action_parameters(KEN, Action.Fall, File.KEN_ANIM_FALL, -1, 0x00000000)
     Character.edit_action_parameters(KEN, Action.FallAerial, File.KEN_ANIM_FALLAERIAL, -1, 0x00000000)
     Character.edit_action_parameters(KEN, Action.FallSpecial, File.KEN_ANIM_FALLSPECIAL, -1, -1)
@@ -52,6 +90,10 @@ scope Ken {
     Character.edit_action_parameters(KEN, Action.TechF, -1, TECHFROLL, -1)
     Character.edit_action_parameters(KEN, Action.TechB, -1, TECHFROLL, -1)
     Character.edit_action_parameters(KEN, Action.Tech, -1, TECHSTAND, -1)
+    Character.edit_action_parameters(KEN, Action.CliffCatch, -1, CLIFFCATCH, -1)
+    Character.edit_action_parameters(KEN, Action.CliffWait, -1, CLIFFWAIT, -1)
+    Character.edit_action_parameters(KEN, Action.CliffQuick, -1, CLIFFQUICK, -1)
+    Character.edit_action_parameters(KEN, Action.CliffSlow, -1, CLIFFSLOW, -1)
     Character.edit_action_parameters(KEN, Action.CliffAttackQuick2, -1, EDGEATTACKF, -1)
     Character.edit_action_parameters(KEN, Action.CliffAttackSlow2, -1, EDGEATTACKS, -1)
     Character.edit_action_parameters(KEN, Action.Taunt, File.KEN_ANIM_TAUNT, TAUNT, -1)
@@ -91,7 +133,7 @@ scope Ken {
     Character.edit_action_parameters(KEN, Action.Run, File.KEN_ANIM_RUN, RUN_, -1)
     Character.edit_action_parameters(KEN, Action.RunBrake, File.KEN_ANIM_RUNBRAKE, -1, -1)
     Character.edit_action_parameters(KEN, Action.Turn, File.KEN_ANIM_TURN, -1, -1);
-    Character.edit_action_parameters(KEN, Action.TurnRun, File.KEN_ANIM_TURNRUN, -1, -1);
+    Character.edit_action_parameters(KEN, Action.TurnRun, File.KEN_ANIM_TURNRUN, RUNTURN, -1);
 
     Character.edit_action_parameters(KEN, Action.DownBounceD, File.KEN_ANIM_DOWNBOUNCED, -1, -1)
     Character.edit_action_parameters(KEN, Action.DownBounceU, File.KEN_ANIM_DOWNBOUNCEU, -1, -1)
@@ -145,6 +187,55 @@ scope Ken {
     Character.edit_action_parameters(KEN, Action.DownForwardU, File.KEN_ANIM_DOWNFORWARDU, -1, -1)
     Character.edit_action_parameters(KEN, Action.DownBackD, File.KEN_ANIM_DOWNBACKD, -1, -1)
     Character.edit_action_parameters(KEN, Action.DownBackU, File.KEN_ANIM_DOWNBACKU, -1, -1)
+
+    Character.edit_action_parameters(KEN, Action.LightItemPickup,    File.KEN_ANIM_LIGHTGET,        LIGHT_ITEM_PICKUP,       -1)
+    Character.edit_action_parameters(KEN, Action.ItemDrop,           File.KEN_ANIM_LIGHTDROP,       ITEM_DROP,                -1)
+    Character.edit_action_parameters(KEN, Action.ItemThrowDash,      File.KEN_ANIM_LIGHTTHROWDASH,  ITEM_THROW_DASH,          -1)
+    Character.edit_action_parameters(KEN, Action.ItemThrowF,         File.KEN_ANIM_LIGHTTHROWF,     ITEM_THROW_F,             -1)
+    Character.edit_action_parameters(KEN, Action.ItemThrowB,         File.KEN_ANIM_LIGHTTHROWF,     ITEM_THROW_B,             -1)
+    Character.edit_action_parameters(KEN, Action.ItemThrowU,         File.KEN_ANIM_LIGHTTHROWU,     ITEM_THROW_U,             -1)
+    Character.edit_action_parameters(KEN, Action.ItemThrowD,         File.KEN_ANIM_LIGHTTHROWD,     ITEM_THROW_D,             -1)
+    Character.edit_action_parameters(KEN, Action.ItemThrowSmashF,    File.KEN_ANIM_LIGHTTHROWF,     ITEM_THROW_SMASH_F,       -1)
+    Character.edit_action_parameters(KEN, Action.ItemThrowSmashB,    File.KEN_ANIM_LIGHTTHROWF,     ITEM_THROW_SMASH_B,       -1)
+    Character.edit_action_parameters(KEN, Action.ItemThrowSmashU,    File.KEN_ANIM_LIGHTTHROWU,     ITEM_THROW_SMASH_U,       -1)
+    Character.edit_action_parameters(KEN, Action.ItemThrowSmashD,    File.KEN_ANIM_LIGHTTHROWD,     ITEM_THROW_SMASH_D,       -1)
+    Character.edit_action_parameters(KEN, Action.ItemThrowAirF,      File.KEN_ANIM_LIGHTTHROWAIRF,  ITEM_THROW_AIR_F,         -1)
+    Character.edit_action_parameters(KEN, Action.ItemThrowAirB,      File.KEN_ANIM_LIGHTTHROWAIRF,  ITEM_THROW_AIR_B,         -1)
+    Character.edit_action_parameters(KEN, Action.ItemThrowAirU,      File.KEN_ANIM_LIGHTTHROWAIRU,  ITEM_THROW_AIR_U,         -1)
+    Character.edit_action_parameters(KEN, Action.ItemThrowAirD,      File.KEN_ANIM_LIGHTTHROWAIRD,  ITEM_THROW_AIR_D,         -1)
+    Character.edit_action_parameters(KEN, Action.ItemThrowAirSmashF, File.KEN_ANIM_LIGHTTHROWAIRF,  ITEM_THROW_AIR_SMASH_F,   -1)
+    Character.edit_action_parameters(KEN, Action.ItemThrowAirSmashB, File.KEN_ANIM_LIGHTTHROWAIRF,  ITEM_THROW_AIR_SMASH_B,   -1)
+    Character.edit_action_parameters(KEN, Action.ItemThrowAirSmashU, File.KEN_ANIM_LIGHTTHROWAIRU,  ITEM_THROW_AIR_SMASH_U,   -1)
+    Character.edit_action_parameters(KEN, Action.ItemThrowAirSmashD, File.KEN_ANIM_LIGHTTHROWAIRD,  ITEM_THROW_AIR_SMASH_D,   -1)
+
+    Character.edit_action_parameters(KEN, Action.RayGunShoot,        File.KEN_ANIM_ITEMSHOOT,       -1, 0x00000000)
+    Character.edit_action_parameters(KEN, Action.RayGunShootAir,     File.KEN_ANIM_ITEMSHOOTAIR,    -1, 0x00000000)
+    Character.edit_action_parameters(KEN, Action.FireFlowerShoot,    File.KEN_ANIM_ITEMSHOOT,       -1, 0x00000000)
+    Character.edit_action_parameters(KEN, Action.FireFlowerShootAir, File.KEN_ANIM_ITEMSHOOTAIR,    -1, 0x00000000)
+
+    Character.edit_action_parameters(KEN, Action.HammerIdle,         File.KEN_ANIM_HAMMER,          HAMMER, -1)
+    Character.edit_action_parameters(KEN, Action.HammerWalk,         File.KEN_ANIM_HAMMER,          HAMMER, -1)
+    Character.edit_action_parameters(KEN, Action.HammerTurn,         File.KEN_ANIM_HAMMER,          HAMMER, -1)
+    Character.edit_action_parameters(KEN, Action.HammerJumpSquat,    File.KEN_ANIM_HAMMER,          HAMMER, -1)
+    Character.edit_action_parameters(KEN, Action.HammerAir,          File.KEN_ANIM_HAMMER,          HAMMER, -1)
+    Character.edit_action_parameters(KEN, Action.HammerLanding,      File.KEN_ANIM_HAMMER,          HAMMER, -1)
+
+    Character.edit_action_parameters(KEN, Action.BeamSwordNeutral,   File.KEN_ANIM_SWING1,          BEAMSWORD_JAB,   -1)
+    Character.edit_action_parameters(KEN, Action.BeamSwordTilt,      File.KEN_ANIM_SWING3,          BEAMSWORD_TILT,  -1)
+    Character.edit_action_parameters(KEN, Action.BeamSwordSmash,     File.KEN_ANIM_SWING4,          BEAMSWORD_SMASH, -1)
+    Character.edit_action_parameters(KEN, Action.BeamSwordDash,      File.KEN_ANIM_SWINGDASH,       BEAMSWORD_DASH,  -1)
+    Character.edit_action_parameters(KEN, Action.BatNeutral,         File.KEN_ANIM_SWING1,          BAT_JAB,         -1)
+    Character.edit_action_parameters(KEN, Action.BatTilt,            File.KEN_ANIM_SWING3,          BAT_TILT,        -1)
+    Character.edit_action_parameters(KEN, Action.BatSmash,           File.KEN_ANIM_SWING4,          BAT_SMASH,       -1)
+    Character.edit_action_parameters(KEN, Action.BatDash,            File.KEN_ANIM_SWINGDASH,       BAT_DASH,        -1)
+    Character.edit_action_parameters(KEN, Action.FanNeutral,         File.KEN_ANIM_SWING1,          FAN_JAB,         -1)
+    Character.edit_action_parameters(KEN, Action.FanTilt,            File.KEN_ANIM_SWING3,          FAN_TILT,        -1)
+    Character.edit_action_parameters(KEN, Action.FanSmash,           File.KEN_ANIM_SWING4,          FAN_SMASH,       -1)
+    Character.edit_action_parameters(KEN, Action.FanDash,            File.KEN_ANIM_SWINGDASH,       FAN_DASH,        -1)
+    Character.edit_action_parameters(KEN, Action.StarRodNeutral,     File.KEN_ANIM_SWING1,          STARROD_JAB,     -1)
+    Character.edit_action_parameters(KEN, Action.StarRodTilt,        File.KEN_ANIM_SWING3,          STARROD_TILT,    -1)
+    Character.edit_action_parameters(KEN, Action.StarRodSmash,       File.KEN_ANIM_SWING4,          STARROD_SMASH,   -1)
+    Character.edit_action_parameters(KEN, Action.StarRodDash,        File.KEN_ANIM_SWINGDASH,       STARROD_DASH,    -1)
 
     // Modify Actions // Action // Staling ID // Main ASM // Interrupt/Other ASM // Movement/Physics ASM // Collision ASM
     Character.edit_action(KEN, 0xE0, -1, 0x8013DA94, 0, 0x8013DB2C, 0x800DE348) // LEFT ENTRY
@@ -282,7 +373,7 @@ scope Ken {
 
     // Set crowd chant FGM.
     Character.table_patch_start(crowd_chant_fgm, Character.id.KEN, 0x2)
-    dh 0x02EA
+    dh FGM.CHANT
     OS.patch_end()
 
     // Set down bound FGM.

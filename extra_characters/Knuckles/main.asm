@@ -42,7 +42,7 @@ scope Knuckles {
     DSMASH_CONCURRENT:
     dw 0xBC000000                                   // slope contour
     dw 0x04000005                                   // wait 5 frames
-    dw 0x380003D8                                   // Spindash SFX
+    dw 0x380003DE                                   // Spindash SFX
     dw 0x04000007                                   // wait 7 frames
     dw 0xA8000000; dw 0xA0300001; dw 0x04000004     // show ball model and wait 4 frames
     Moveset.SUBROUTINE(SHOW_MODEL); dw 0x04000002   // show full model and wait 2 frames

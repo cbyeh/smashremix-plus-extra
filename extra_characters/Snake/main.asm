@@ -8,7 +8,6 @@ scope Snake {
     insert SHIELDBREAK_, "moveset/SHIELD_BREAK.bin"; Moveset.GO_TO(SPARKLE_)
     insert STUN_, "moveset/STUN.bin"; Moveset.GO_TO(STUN_)
     insert SLEEP_, "moveset/SLEEP.bin"; Moveset.GO_TO(SLEEP_)
-    
     CUSTOM_THROWB:; Moveset.THROW_DATA(throwBData); Moveset.GO_TO(throwB)
     CUSTOM_THROWF:; Moveset.THROW_DATA(throwFData); Moveset.GO_TO(throwF)
     GRAB_:; Moveset.THROW_DATA(throwFData); Moveset.GO_TO(grab)
@@ -17,16 +16,43 @@ scope Snake {
 
     C4_VOICE_ARRAY:; dh Snake.FGM.NOW; dh Snake.FGM.THERE; OS.align(4);
     c4Detonate:
+		Moveset.HIDE_ITEM()
         Moveset.AFTER(8);
         Moveset.RANDOM_SFX(100, 0x1, 0x2, C4_VOICE_ARRAY);
         Moveset.AFTER(22);
         Moveset.CREATE_GFX(17, 31, 0, 0, 0, 0, 0, 0);
         Moveset.END();
+	
+	hide_item:
+		Moveset.HIDE_ITEM()
+	    Moveset.END();
+
+	UAIR_LANDING:
+	dw 0x38000049, 0x98003400, 0x00000000, 0x00000000, 0x00000000, 0x00000000
+
+    ITEM_THROW_DASH:; dw 0x08000005; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW_DASH); dw 0
+    ITEM_THROW_F:; dw 0xBC000003; dw 0x08000007; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW); dw 0
+    ITEM_THROW_B:; dw 0xBC000003; dw 0x60000008; dw 0x08000007; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW); dw 0
+    ITEM_THROW_U:; dw 0xBC000003; dw 0x0800000C; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW); dw 0
+    ITEM_THROW_D:; dw 0xBC000003; dw 0x08000006; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW); dw 0
+    ITEM_THROW_SMASH_F:; dw 0xBC000003; dw 0x08000007; dw 0x50000000; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW); dw 0
+    ITEM_THROW_SMASH_B:; dw 0xBC000003; dw 0x60000008; dw 0x08000007; dw 0x50000000; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW); dw 0
+    ITEM_THROW_SMASH_U:; dw 0xBC000003; dw 0x0800000C; dw 0x50000000; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW); dw 0
+    ITEM_THROW_SMASH_D:; dw 0xBC000003; dw 0x08000006; dw 0x50000000; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW); dw 0
+    ITEM_THROW_AIR_F:; dw 0xBC000003; dw 0x08000007; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW); dw 0
+    ITEM_THROW_AIR_B:; dw 0xBC000003; dw 0x60000004; dw 0x08000007; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW); dw 0
+    ITEM_THROW_AIR_U:; dw 0xBC000003; dw 0x0800000B; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW); dw 0
+    ITEM_THROW_AIR_D:; dw 0xBC000003; dw 0x08000006; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW); dw 0
+    ITEM_THROW_AIR_SMASH_F:; dw 0xBC000003; dw 0x08000007; dw 0x50000000; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW_AIR_SMASH_FB); dw 0
+    ITEM_THROW_AIR_SMASH_B:; dw 0xBC000003; dw 0x60000006; dw 0x08000007; dw 0x50000000; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW_AIR_SMASH_FB); dw 0
+    ITEM_THROW_AIR_SMASH_U:; dw 0xBC000003; dw 0x0800000B; dw 0x50000000; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW_SMASH_UD); dw 0
+    ITEM_THROW_AIR_SMASH_D:; dw 0xBC000003; dw 0x08000006; dw 0x50000000; Moveset.SUBROUTINE(Moveset.shared.ITEM_THROW_SMASH_UD); dw 0
 
     // Modify Action Parameters // Action // Animation // Moveset Data // Flags
     Character.edit_action_parameters(SNAKE, Action.Entry, File.SNAKE_ANIM_IDLE, -1, -1)
     Character.edit_action_parameters(SNAKE, Action.Idle, File.SNAKE_ANIM_IDLE, -1, -1)
     Character.edit_action_parameters(SNAKE, Action.Revive1, File.SNAKE_ANIM_DOWNBOUNCED, -1, -1)
+    Character.edit_action_parameters(SNAKE, Action.Revive2, File.SNAKE_ANIM_DOWNSTANDD, -1, -1)
     Character.edit_action_parameters(SNAKE, Action.ReviveWait, File.SNAKE_ANIM_IDLE, -1, -1)
 
     Character.edit_action_parameters(SNAKE, Action.Taunt, File.SNAKE_ANIM_TAUNT, tauntColonel, 0x10000000)
@@ -116,19 +142,29 @@ scope Snake {
     Character.edit_action_parameters(SNAKE, Action.RollB, File.SNAKE_ANIM_ROLLB, -1, -1)
     Character.edit_action_parameters(SNAKE, Action.RollF, File.SNAKE_ANIM_ROLLF, -1, -1)
 	
-    Character.edit_action_parameters(SNAKE, Action.Tech, -1, Tech, -1)
-    Character.edit_action_parameters(SNAKE, Action.TechF, -1, TechRoll, -1)
-    Character.edit_action_parameters(SNAKE, Action.TechB, -1, TechRoll, -1)
+    Character.edit_action_parameters(SNAKE, Action.Tech, File.SNAKE_ANIM_TECH, Tech, -1)
+    Character.edit_action_parameters(SNAKE, Action.TechF, File.SNAKE_ANIM_TECHF, TechRoll, -1)
+    Character.edit_action_parameters(SNAKE, Action.TechB, File.SNAKE_ANIM_TECHB, TechRoll, -1)
     Character.edit_action_parameters(SNAKE, Action.CliffAttackQuick2, -1, CliffATKQuick, -1)
     Character.edit_action_parameters(SNAKE, Action.CliffAttackSlow2, -1, CliffATKSlow, -1)
     Character.edit_action_parameters(SNAKE, Action.Teeter, -1, Teeter, -1)
 
+    Character.edit_action_parameters(SNAKE, Action.CapturePulled, File.SNAKE_ANIM_CAPTUREPULLED, -1, -1)
     Character.edit_action_parameters(SNAKE, Action.DownBounceD, File.SNAKE_ANIM_DOWNBOUNCED, -1, -1)
     Character.edit_action_parameters(SNAKE, Action.DownBounceU, File.SNAKE_ANIM_DOWNBOUNCEU, -1, -1)
     Character.edit_action_parameters(SNAKE, Action.StunLandD, File.SNAKE_ANIM_DOWNBOUNCED, -1, -1)
     Character.edit_action_parameters(SNAKE, Action.StunLandU, File.SNAKE_ANIM_DOWNBOUNCEU, -1, -1)
     Character.edit_action_parameters(SNAKE, Action.Pass, File.SNAKE_ANIM_PASSPLATFORMDROP, -1, -1)
     Character.edit_action_parameters(SNAKE, Action.ClangRecoil, File.SNAKE_ANIM_CLANGRECOIL, -1, -1)
+
+    Character.edit_action_parameters(SNAKE, Action.DownAttackD, File.SNAKE_ANIM_DOWNATTACKD, -1, -1)
+    Character.edit_action_parameters(SNAKE, Action.DownAttackU, File.SNAKE_ANIM_DOWNATTACKU, -1, -1)
+    Character.edit_action_parameters(SNAKE, Action.DownStandD, File.SNAKE_ANIM_DOWNSTANDD, -1, -1)
+    Character.edit_action_parameters(SNAKE, Action.DownStandU, File.SNAKE_ANIM_DOWNSTANDU, -1, -1)
+    Character.edit_action_parameters(SNAKE, Action.DownForwardD, File.SNAKE_ANIM_DOWNFORWARDD, -1, -1)
+    Character.edit_action_parameters(SNAKE, Action.DownForwardU, File.SNAKE_ANIM_DOWNFORWARDU, -1, -1)
+    Character.edit_action_parameters(SNAKE, Action.DownBackD, File.SNAKE_ANIM_DOWNBACKD, -1, -1)
+    Character.edit_action_parameters(SNAKE, Action.DownBackU, File.SNAKE_ANIM_DOWNBACKU, -1, -1)
 
     Character.edit_action_parameters(SNAKE, Action.InhalePulled, File.SNAKE_ANIM_DAMAGEFALL, -1, -1)
     Character.edit_action_parameters(SNAKE, Action.InhaleSpat, File.SNAKE_ANIM_DAMAGEFALL, -1, -1)
@@ -149,17 +185,30 @@ scope Snake {
     Character.edit_action_parameters(SNAKE, Action.LandingLight, File.SNAKE_ANIM_LANDING, -1, -1);
     Character.edit_action_parameters(SNAKE, Action.LandingHeavy, File.SNAKE_ANIM_LANDING, -1, -1);
     Character.edit_action_parameters(SNAKE, Action.LandingAirX, File.SNAKE_ANIM_LANDING, -1, -1);
-    Character.edit_action_parameters(SNAKE, Action.LandingAirU, File.SNAKE_ANIM_LANDINGAIRU, -1, -1);
+    Character.edit_action_parameters(SNAKE, Action.LandingAirU, File.SNAKE_ANIM_LANDINGAIRU, UAIR_LANDING, -1);
     Character.edit_action_parameters(SNAKE, Action.LandingAirF, File.SNAKE_ANIM_LANDINGAIRF, -1, -1);
     Character.edit_action_parameters(SNAKE, Action.LandingAirB, File.SNAKE_ANIM_LANDINGAIRB, -1, -1);
 
-    Character.edit_action_parameters(SNAKE, Action.ItemThrowF, File.SNAKE_ANIM_ITEMTHROWF, -1, -1)
-    Character.edit_action_parameters(SNAKE, Action.ItemThrowB, File.SNAKE_ANIM_ITEMTHROWF, -1, -1)
-    Character.edit_action_parameters(SNAKE, Action.ItemThrowSmashF, File.SNAKE_ANIM_ITEMTHROWF, -1, -1)
-    Character.edit_action_parameters(SNAKE, Action.ItemThrowSmashB, File.SNAKE_ANIM_ITEMTHROWF, -1, -1)
+    Character.edit_action_parameters(SNAKE, Action.ItemThrowDash, File.SNAKE_ANIM_ITEMTHROWDASH, ITEM_THROW_DASH, -1)
+    Character.edit_action_parameters(SNAKE, Action.ItemThrowF, File.SNAKE_ANIM_ITEMTHROWF, ITEM_THROW_F, -1)
+    Character.edit_action_parameters(SNAKE, Action.ItemThrowB, File.SNAKE_ANIM_ITEMTHROWF, ITEM_THROW_B, -1)
+    Character.edit_action_parameters(SNAKE, Action.ItemThrowU, File.SNAKE_ANIM_ITEMTHROWU, ITEM_THROW_U, -1)
+    Character.edit_action_parameters(SNAKE, Action.ItemThrowD, File.SNAKE_ANIM_ITEMTHROWD, ITEM_THROW_D, -1)
+    Character.edit_action_parameters(SNAKE, Action.ItemThrowSmashF, File.SNAKE_ANIM_ITEMTHROWF, ITEM_THROW_SMASH_F, -1)
+    Character.edit_action_parameters(SNAKE, Action.ItemThrowSmashB, File.SNAKE_ANIM_ITEMTHROWF, ITEM_THROW_SMASH_B, -1)
+    Character.edit_action_parameters(SNAKE, Action.ItemThrowSmashU, File.SNAKE_ANIM_ITEMTHROWU, ITEM_THROW_SMASH_U, -1)
+    Character.edit_action_parameters(SNAKE, Action.ItemThrowSmashD, File.SNAKE_ANIM_ITEMTHROWD, ITEM_THROW_SMASH_D, -1)
+    Character.edit_action_parameters(SNAKE, Action.ItemThrowAirF, File.SNAKE_ANIM_ITEMTHROWAIRF, ITEM_THROW_AIR_F, -1)
+    Character.edit_action_parameters(SNAKE, Action.ItemThrowAirB, File.SNAKE_ANIM_ITEMTHROWAIRF, ITEM_THROW_AIR_B, -1)
+    Character.edit_action_parameters(SNAKE, Action.ItemThrowAirU, File.SNAKE_ANIM_ITEMTHROWAIRU, ITEM_THROW_AIR_U, -1)
+    Character.edit_action_parameters(SNAKE, Action.ItemThrowAirD, File.SNAKE_ANIM_ITEMTHROWAIRD, ITEM_THROW_AIR_D, -1)
+    Character.edit_action_parameters(SNAKE, Action.ItemThrowAirSmashF, File.SNAKE_ANIM_ITEMTHROWAIRF, ITEM_THROW_AIR_SMASH_F, -1)
+    Character.edit_action_parameters(SNAKE, Action.ItemThrowAirSmashB, File.SNAKE_ANIM_ITEMTHROWAIRF, ITEM_THROW_AIR_SMASH_B, -1)
+    Character.edit_action_parameters(SNAKE, Action.ItemThrowAirSmashU, File.SNAKE_ANIM_ITEMTHROWAIRU, ITEM_THROW_AIR_SMASH_U, -1)
+    Character.edit_action_parameters(SNAKE, Action.ItemThrowAirSmashD, File.SNAKE_ANIM_ITEMTHROWAIRD, ITEM_THROW_AIR_SMASH_D, -1)
 
-    Character.edit_action_parameters(SNAKE, 0xE0, File.SNAKE_ANIM_ENTRYR, -1, 0x40000009)
-    Character.edit_action_parameters(SNAKE, 0xE1, File.SNAKE_ANIM_ENTRYL, -1, 0x40000009)
+    Character.edit_action_parameters(SNAKE, 0xE0, File.SNAKE_ANIM_ENTRYR, entry, 0x40000009)
+    Character.edit_action_parameters(SNAKE, 0xE1, File.SNAKE_ANIM_ENTRYL, entry, 0x40000009)
 
     // Modify Actions // Action // Staling ID // Main ASM // Interrupt/Other ASM // Movement/Physics ASM // Collision ASM
     Character.edit_action(SNAKE, 0xE0, -1, 0x8013DA94, 0, 0x8013DB2C, 0x800DE348) // LEFT ENTRY
@@ -251,32 +300,32 @@ scope Snake {
     // grenadethrowfair
 
     // C4 actions (grounded)
-    Character.add_new_action_params(SNAKE, C4START, -1, File.SNAKE_ANIM_C4START, 0, 0x00000000)
+    Character.add_new_action_params(SNAKE, C4START, -1, File.SNAKE_ANIM_C4START, hide_item, 0x00000000)
     Character.add_new_action(SNAKE, C4START, -1, ActionParams.C4START, -1, SnakeSpecial.C4.Start.main, 0, 0x800D8BB4, 0x800DDF44)
 
-    Character.add_new_action_params(SNAKE, C4GROUND, -1, File.SNAKE_ANIM_C4GROUND, 0, 0x00000000)
+    Character.add_new_action_params(SNAKE, C4GROUND, -1, File.SNAKE_ANIM_C4GROUND, hide_item, 0x00000000)
     Character.add_new_action(SNAKE, C4GROUND, -1, ActionParams.C4GROUND, -1, SnakeSpecial.C4.Ground.main_ground, 0, 0x800D8BB4, 0x800DDF44)
 
-    Character.add_new_action_params(SNAKE, C4WALL, -1, File.SNAKE_ANIM_C4WALL, 0, 0x00000000)
+    Character.add_new_action_params(SNAKE, C4WALL, -1, File.SNAKE_ANIM_C4WALL, hide_item, 0x00000000)
     Character.add_new_action(SNAKE, C4WALL, -1, ActionParams.C4WALL, -1, SnakeSpecial.C4.Ground.main_ground, 0, 0x800D8BB4, 0x800DDF44)
 
-    Character.add_new_action_params(SNAKE, C4ENEMY, -1, File.SNAKE_ANIM_C4ENEMY, 0, 0x00000000)
+    Character.add_new_action_params(SNAKE, C4ENEMY, -1, File.SNAKE_ANIM_C4ENEMY, hide_item, 0x00000000)
     Character.add_new_action(SNAKE, C4ENEMY, -1, ActionParams.C4ENEMY, -1, SnakeSpecial.C4.Ground.main_ground, 0, 0x800D8BB4, 0x800DDF44)
 
     Character.add_new_action_params(SNAKE, C4DETONATE, -1, File.SNAKE_ANIM_C4DETONATE, c4Detonate, 0x00000000)
     Character.add_new_action(SNAKE, C4DETONATE, -1, ActionParams.C4DETONATE, -1, SnakeSpecial.C4.Detonate.main_ground, 0, 0x800D8BB4, 0x800DDF44)
 
     // C4 actions (air)
-    Character.add_new_action_params(SNAKE, C4AIRSTART, -1, File.SNAKE_ANIM_C4AIRSTART, 0, 0x00000000)
+    Character.add_new_action_params(SNAKE, C4AIRSTART, -1, File.SNAKE_ANIM_C4AIRSTART, hide_item, 0x00000000)
     Character.add_new_action(SNAKE, C4AIRSTART, -1, ActionParams.C4AIRSTART, -1, SnakeSpecial.C4.Start.main, 0, 0x800D90E0, SnakeSpecial.C4.Start.air_collision)
 
-    Character.add_new_action_params(SNAKE, C4AIRGROUND, -1, File.SNAKE_ANIM_C4AIRGROUND, 0, 0x00000000)
+    Character.add_new_action_params(SNAKE, C4AIRGROUND, -1, File.SNAKE_ANIM_C4AIRGROUND, hide_item, 0x00000000)
     Character.add_new_action(SNAKE, C4AIRGROUND, -1, ActionParams.C4AIRGROUND, -1, SnakeSpecial.C4.Ground.main_air, 0, 0x800D90E0, 0x800DE978)
 
-    Character.add_new_action_params(SNAKE, C4AIRWALL, -1, File.SNAKE_ANIM_C4AIRWALL, 0, 0x00000000)
+    Character.add_new_action_params(SNAKE, C4AIRWALL, -1, File.SNAKE_ANIM_C4AIRWALL, hide_item, 0x00000000)
     Character.add_new_action(SNAKE, C4AIRWALL, -1, ActionParams.C4AIRWALL, -1, SnakeSpecial.C4.Ground.main_air, 0, 0x800D90E0, 0x800DE978)
 
-    Character.add_new_action_params(SNAKE, C4AIRENEMY, -1, File.SNAKE_ANIM_C4AIRENEMY, 0, 0x00000000)
+    Character.add_new_action_params(SNAKE, C4AIRENEMY, -1, File.SNAKE_ANIM_C4AIRENEMY, hide_item, 0x00000000)
     Character.add_new_action(SNAKE, C4AIRENEMY, -1, ActionParams.C4AIRENEMY, -1, SnakeSpecial.C4.Ground.main_air, 0, 0x800D90E0, 0x800DE978)
 
     Character.add_new_action_params(SNAKE, C4AIRDETONATE, -1, File.SNAKE_ANIM_C4AIRDETONATE, c4Detonate, 0x00000000)
@@ -351,19 +400,19 @@ scope Snake {
 
     // Taunt
     Character.add_new_action_params(SNAKE, TAUNT_COLONEL, -1, File.SNAKE_ANIM_TAUNT, tauntColonel, 0x10000000)
-    Character.add_new_action(SNAKE, TAUNT_COLONEL, Action.Taunt, ActionParams.TAUNT_COLONEL, -1, SnakeSpecial.Taunt.main, 0, 0x800D8BB4, 0x800DDF44)
+    Character.add_new_action(SNAKE, TAUNT_COLONEL, Action.Taunt, ActionParams.TAUNT_COLONEL, -1, SnakeSpecial.Taunt.main, 0x8014E6A0, 0x800D8BB4, 0x800DDEE8)
 
     Character.add_new_action_params(SNAKE, TAUNT_MEILING, -1, File.SNAKE_ANIM_TAUNT, tauntMeiling, 0x10000000)
-    Character.add_new_action(SNAKE, TAUNT_MEILING, Action.Taunt, ActionParams.TAUNT_MEILING, -1, 0x800D94C4, 0, 0x800D8BB4, 0x800DDF44)
+    Character.add_new_action(SNAKE, TAUNT_MEILING, Action.Taunt, ActionParams.TAUNT_MEILING, -1, 0x800D94C4, 0x8014E6A0, 0x800D8BB4, 0x800DDEE8)
 
     Character.add_new_action_params(SNAKE, TAUNT_OTACON, -1, File.SNAKE_ANIM_TAUNT, tauntOtacon, 0x10000000)
-    Character.add_new_action(SNAKE, TAUNT_OTACON, Action.Taunt, ActionParams.TAUNT_OTACON, -1, 0x800D94C4, 0, 0x800D8BB4, 0x800DDF44)
+    Character.add_new_action(SNAKE, TAUNT_OTACON, Action.Taunt, ActionParams.TAUNT_OTACON, -1, 0x800D94C4, 0x8014E6A0, 0x800D8BB4, 0x800DDEE8)
 
     Character.add_new_action_params(SNAKE, TAUNT_FALCON, -1, File.SNAKE_ANIM_TAUNT, tauntFalcon, 0x10000000)
-    Character.add_new_action(SNAKE, TAUNT_FALCON, Action.Taunt, ActionParams.TAUNT_FALCON, -1, 0x800D94C4, 0, 0x800D8BB4, 0x800DDF44)
+    Character.add_new_action(SNAKE, TAUNT_FALCON, Action.Taunt, ActionParams.TAUNT_FALCON, -1, 0x800D94C4, 0x8014E6A0, 0x800D8BB4, 0x800DDEE8)
 
     Character.add_new_action_params(SNAKE, TAUNT_SLIPPY, -1, File.SNAKE_ANIM_TAUNT, tauntSlippy, 0x10000000)
-    Character.add_new_action(SNAKE, TAUNT_SLIPPY, Action.Taunt, ActionParams.TAUNT_SLIPPY, -1, 0x800D94C4, 0, 0x800D8BB4, 0x800DDF44)
+    Character.add_new_action(SNAKE, TAUNT_SLIPPY, Action.Taunt, ActionParams.TAUNT_SLIPPY, -1, 0x800D94C4, 0x8014E6A0, 0x800D8BB4, 0x800DDEE8)
 
     // Action replacement map
     scope action_replace_map_: {
@@ -434,7 +483,7 @@ scope Snake {
 
     // // Set crowd chant FGM.
     // Character.table_patch_start(crowd_chant_fgm, Character.id.SNAKE, 0x2)
-    // dh 0x031E
+    // dh FGM.CHANT
     // OS.patch_end()
 
     // // Set action strings
@@ -553,4 +602,10 @@ scope Snake {
     Character.table_patch_start(action_string, Character.id.SNAKE, 0x4)
     dw Action.action_string_table
     OS.patch_end()
+	
+	// Chant FGM
+    Character.table_patch_start(crowd_chant_fgm, Character.id.SNAKE, 0x2)
+    dh FGM.CHANT
+    OS.patch_end()
+	
 }

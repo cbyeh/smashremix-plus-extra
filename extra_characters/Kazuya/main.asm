@@ -12,27 +12,38 @@ scope Kazuya {
     CUSTOM_THROWB:; Moveset.THROW_DATA(THROWB_DATA); insert "moveset/THROWB.bin"
     // GRAB_:; Moveset.THROW_DATA(THROWF_DATA); Moveset.GO_TO(GRAB)
 
+
+	TAUNT:
+	Moveset.AFTER(80);
+    dw 0xC0000000
+	dw 0x58000001
+	dw 0
+
 	insert RUN_,"moveset/RUN.bin"; Moveset.GO_TO(RUN_) // loops
 
     // Modify Action Parameters // Action // Animation // Moveset Data // Flags
     Character.edit_action_parameters(KAZUYA, Action.Entry, File.KAZUYA_ANIM_IDLE, -1, -1)
     Character.edit_action_parameters(KAZUYA, 0x006, File.KAZUYA_ANIM_IDLE, -1, -1)
     Character.edit_action_parameters(KAZUYA, Action.Idle, File.KAZUYA_ANIM_IDLE, -1, -1)
+    Character.edit_action_parameters(KAZUYA, Action.Turn, File.KAZUYA_ANIM_TURN, -1, -1)
     Character.edit_action_parameters(KAZUYA, Action.Dash, File.KAZUYA_ANIM_DASH, -1, 0x00000000)
     Character.edit_action_parameters(KAZUYA, Action.Run, File.KAZUYA_ANIM_RUN, RUN_, -1)
+    Character.edit_action_parameters(KAZUYA, Action.RunBrake, File.KAZUYA_ANIM_RUNBRAKE, RUNBRAKE, -1)
+    Character.edit_action_parameters(KAZUYA, Action.TurnRun, File.KAZUYA_ANIM_TURNRUN, turnRun, -1)
     Character.edit_action_parameters(KAZUYA, Action.Jab1, File.KAZUYA_ANIM_JAB1, JAB1, 0x40000000)
     Character.edit_action_parameters(KAZUYA, Action.Jab2, File.KAZUYA_ANIM_JAB2, JAB2, 0x40000000)
     Character.edit_action_parameters(KAZUYA, 0xDC, File.KAZUYA_ANIM_JAB3, JAB3, 0x40000000)
-    Character.edit_action_parameters(KAZUYA, Action.RunBrake, File.KAZUYA_ANIM_RUNBRAKE, -1, -1)
     Character.edit_action_parameters(KAZUYA, Action.JumpSquat, File.KAZUYA_ANIM_JUMPSQUAT, -1, -1)
     Character.edit_action_parameters(KAZUYA, Action.ShieldJumpSquat, File.KAZUYA_ANIM_JUMPSQUAT, -1, -1)
+    Character.edit_action_parameters(KAZUYA, Action.Fall, File.KAZUYA_ANIM_FALL, -1, -1)
+    Character.edit_action_parameters(KAZUYA, Action.FallAerial, File.KAZUYA_ANIM_FALLAERIAL, -1, -1)
 
     Character.edit_action_parameters(KAZUYA, 0xE0, File.KAZUYA_ANIM_ENTRYR, ENTRY, -1)
     Character.edit_action_parameters(KAZUYA, 0xE1, File.KAZUYA_ANIM_ENTRYL, ENTRY, -1)
     Character.edit_action(KAZUYA, 0xE0, -1, 0x8013DA94, 0, 0x8013DB2C, 0x800DE348) // LEFT ENTRY
     Character.edit_action(KAZUYA, 0xE1, -1, 0x8013DA94, 0, 0x8013DB2C, 0x800DE348) // RIGHT ENTRY
 
-    Character.edit_action_parameters(KAZUYA, Action.Taunt, File.KAZUYA_ANIM_TAUNT, 0, -1)
+    Character.edit_action_parameters(KAZUYA, Action.Taunt, File.KAZUYA_ANIM_TAUNT, TAUNT, -1)
 
     Character.edit_action_parameters(KAZUYA, Action.Walk1, File.KAZUYA_ANIM_WALK1, -1, -1)
     Character.edit_action_parameters(KAZUYA, Action.Walk2, File.KAZUYA_ANIM_WALK2, -1, -1)
@@ -50,10 +61,10 @@ scope Kazuya {
     Character.edit_action_parameters(KAZUYA, Action.CrouchIdle, File.KAZUYA_ANIM_CROUCHWAIT, EMPTY, -1)
     Character.edit_action_parameters(KAZUYA, Action.CrouchEnd, File.KAZUYA_ANIM_CROUCHEND, EMPTY, -1)
 
-    Character.edit_action_parameters(KAZUYA, Action.JumpF, File.KAZUYA_ANIM_JUMP, JUMP, 0x00000000)
-    Character.edit_action_parameters(KAZUYA, Action.JumpB, File.KAZUYA_ANIM_JUMP, JUMP, 0x00000000)
-    Character.edit_action_parameters(KAZUYA, Action.JumpAerialF, File.KAZUYA_ANIM_JUMP, JUMP_AERIAL, 0x00000000)
-    Character.edit_action_parameters(KAZUYA, Action.JumpAerialB, File.KAZUYA_ANIM_JUMP, JUMP_AERIAL, 0x00000000)
+    Character.edit_action_parameters(KAZUYA, Action.JumpF, File.KAZUYA_ANIM_JUMPF, JUMP, 0x00000000)
+    Character.edit_action_parameters(KAZUYA, Action.JumpB, File.KAZUYA_ANIM_JUMPF, JUMP, 0x00000000)
+    Character.edit_action_parameters(KAZUYA, Action.JumpAerialF, File.KAZUYA_ANIM_JUMPB, JUMP_AERIAL, 0x00000000)
+    Character.edit_action_parameters(KAZUYA, Action.JumpAerialB, File.KAZUYA_ANIM_JUMPB, JUMP_AERIAL, 0x00000000)
 
     Character.edit_action_parameters(KAZUYA, Action.UTilt, File.KAZUYA_ANIM_TILTU1, TILTU1, 0x40000000)
 
@@ -143,7 +154,9 @@ scope Kazuya {
     Character.add_new_action_params(KAZUYA, TSUNAMI1, Action.FTiltLow, File.KAZUYA_ANIM_TSUNAMI1, TSUNAMI1, 0x40000000)
     Character.add_new_action_params(KAZUYA, RR3KICKS1, Action.FTiltHigh, File.KAZUYA_ANIM_RR3KICKS1, RR3KICKS1, 0x40000000)
     Character.add_new_action_params(KAZUYA, SMASHD, Action.DSmash, File.KAZUYA_ANIM_SMASHD, SMASHD, 0x40000000)
-    Character.add_new_action_params(KAZUYA, DASH, Action.Dash, File.KAZUYA_ANIM_DASH, -1, 0x00000000)
+    Character.add_new_action_params(KAZUYA, DASH, Action.Dash, File.KAZUYA_ANIM_DASH, dash, 0x40000000)
+    Character.add_new_action_params(KAZUYA, TURN, Action.Turn, File.KAZUYA_ANIM_TURN, turn, 0x0)
+    Character.add_new_action_params(KAZUYA, DASHBACK, -1, File.KAZUYA_ANIM_DASHB, 0x80000000, 0x00000000)
     Character.add_new_action_params(KAZUYA, CROUCHSTART, Action.Crouch, File.KAZUYA_ANIM_CROUCHSTART, 0x80000000, 0x00000000)
     Character.add_new_action_params(KAZUYA, CROUCHWAIT, Action.CrouchIdle, File.KAZUYA_ANIM_CROUCHWAIT, 0x80000000, 0x00000000)
     Character.add_new_action_params(KAZUYA, CROUCHEND, Action.CrouchEnd, File.KAZUYA_ANIM_CROUCHEND, 0x80000000, 0x00000000)
@@ -173,6 +186,8 @@ scope Kazuya {
     Character.add_new_action(KAZUYA, RR3KICKS1, Action.FTiltHigh, ActionParams.RR3KICKS1, -1, KazuyaSpecial.RR3KICKS.main, -1, 0x800D8C14, 0x800DDF44)
     Character.add_new_action(KAZUYA, SMASHD, Action.DSmash, ActionParams.SMASHD, -1, KazuyaSpecial.SMASHD.main, -1, 0x800D8C14, 0x800DDF44)
     Character.add_new_action(KAZUYA, DASH, Action.Dash, ActionParams.DASH, -1, KazuyaSpecial.DASH.main, 0x8013EA90, 0x8013EC58, 0x8013ECB0)
+    Character.add_new_action(KAZUYA, TURN, Action.Turn, ActionParams.TURN, -1, KazuyaSpecial.TURN.main, 0x8013E700, 0x800D8BB4, 0x800DDEC4)
+    Character.add_new_action(KAZUYA, DASHBACK, -1, ActionParams.DASHBACK, -1, KazuyaSpecial.DASHBACK.main, KazuyaSpecial.DASHBACK.interrupt, 0x8013EC58, 0x8013ECB0)
     Character.add_new_action(KAZUYA, CROUCHSTART, Action.Crouch, ActionParams.CROUCHSTART, -1, 0x80142ED8, 0x80142EFC, 0x800D8BB4, 0x800DDEC4)
     Character.add_new_action(KAZUYA, CROUCHWAIT, Action.CrouchIdle, ActionParams.CROUCHWAIT, -1, 0x8014314C, KazuyaSpecial.CROUCHWAIT.interrupt, 0x800D8BB4, 0x800DDEC4)
     Character.add_new_action(KAZUYA, CROUCHEND, Action.CrouchEnd, ActionParams.CROUCHEND, -1, 0x800D94C4, KazuyaSpecial.CROUCHEND.interrupt, 0x800D8BB4, 0x800DDEC4)
@@ -195,6 +210,7 @@ scope Kazuya {
         dh Action.FTiltHigh; dh Kazuya.Action.RR3KICKS1;
         dh Action.DSmash; dh Kazuya.Action.SMASHD;
         dh Action.Dash; dh Kazuya.Action.DASH;
+        dh Action.Turn; dh Kazuya.Action.TURN;
         dh Action.Crouch; dh Kazuya.Action.CROUCHSTART;
         dh Action.CrouchIdle; dh Kazuya.Action.CROUCHWAIT;
         dh Action.CrouchEnd; dh Kazuya.Action.CROUCHEND;
@@ -304,24 +320,34 @@ scope Kazuya {
         string_0x0ED:; String.insert("StoneHeadAir")
         string_0x0EE:; String.insert("---")
 
-        string_0x0F3:; String.insert("WhileStand")
-        string_0x0F4:; String.insert("Wavedash")
-        string_0x0F5:; String.insert("GodFist")
+        string_0x0F3:; String.insert("DemonGodFist")
+        string_0x0F4:; String.insert("CrouchDash")
+        string_0x0F5:; String.insert("WindGodFist")
         string_0x0F6:; String.insert("CrouchJab")
-        string_0x0F7:; String.insert("Sweep1")
-        string_0x0F8:; String.insert("Sweep2")
-        string_0x0F9:; String.insert("UpTilt2")
+        string_0x0F7:; String.insert("SpinningDemon")
+        string_0x0F8:; String.insert("SpinningDemon2")
+        string_0x0F9:; String.insert("TwinPistons2")
         string_0x0FA:; String.insert("CrouchTilt")
-        string_0x0FB:; String.insert("Usp")
-        string_0x0FC:; String.insert("UspLand")
+        string_0x0FB:; String.insert("HopbackPunch")
+        string_0x0FC:; String.insert("HopbackPunchLand")
         string_0x0FD:; String.insert("TsunamiKick2")
         string_0x0FE:; String.insert("RoundhouseToTripleSpinKick2")
         string_0x0FF:; String.insert("RoundhouseToTripleSpinKick3")
         string_0x100:; String.insert("RoundhouseToTripleSpinKick4")
         string_0x101:; String.insert("LightningScrewUppercut")
+        string_0x102:; String.insert("---")
+        string_0x103:; String.insert("---")
+        string_0x104:; String.insert("---")
+        string_0x105:; String.insert("---")
+        string_0x106:; String.insert("---")
+        string_0x107:; String.insert("---")
+        string_0x108:; String.insert("---")
+        string_0x109:; String.insert("---")
+        string_0x10A:; String.insert("---")
+        string_0x10B:; String.insert("DashBack")
 
         action_string_table:
-        dw 0
+        dw Action.COMMON.string_jab3
         dw 0
         dw 0
         dw 0
@@ -356,6 +382,16 @@ scope Kazuya {
         dw string_0x0FF
         dw string_0x100
         dw string_0x101
+        dw string_0x102
+        dw string_0x103
+        dw string_0x104
+        dw string_0x105
+        dw string_0x106
+        dw string_0x107
+        dw string_0x108
+        dw string_0x109
+        dw string_0x10A
+        dw string_0x10B
     }
 
     // Set action strings
@@ -363,20 +399,52 @@ scope Kazuya {
     dw Action.action_string_table
     OS.patch_end()
 
-    WAVEDASH_B:
+    KAZUYA_WAVEDASH:
+    // reset stick
     AI.UNPRESS_Z()
     AI.UNPRESS_A(0)
     AI.UNPRESS_B(0)
-    AI.STICK_X(0, 5)
-    AI.STICK_Y(0, 9)
-    dh 0xA07F // stick x = dash to opponent
-    AI.STICK_Y(0, 7) // 7 frame wait
     AI.STICK_X(0)
-    AI.STICK_Y(0, 2)
-    dh 0xA080 // stick x = dash to opponent
-    AI.STICK_Y(-0x28, 1)
+    AI.STICK_Y(0, 1)
+    // dash forward
+    AI.STICK_X(0x7F, 1) // dash towards opponent for 1f
+    AI.CUSTOM(4); // wait for turnaround to finish if needed
+    // stick down
+    AI.STICK_X(0)
+    AI.STICK_Y(-0x7F, 1) // stick down for 1f
+    // wavedash (down + forward)
+    AI.STICK_Y(-0x7F) // full down
+    AI.STICK_X(0x7F, 1) // autofull towards opponent
+    AI.STICK_X(0)
+    AI.STICK_Y(0, 9)
+    // dash forward
+    AI.STICK_X(0x7F, 1) // dash towards opponent for 1f
+    AI.STICK_X(0)
+    AI.STICK_Y(0)
+    AI.END(); // End routine
+    AI.add_cpu_input_routine(KAZUYA_WAVEDASH)
+
+    WAVEDASH_B:
+    // reset stick
+    AI.UNPRESS_Z()
+    AI.UNPRESS_A(0)
+    AI.UNPRESS_B(0)
+    AI.STICK_X(0)
+    AI.STICK_Y(0, 1)
+    // dash forward
+    AI.STICK_X(0x7F, 1) // dash towards opponent for 1f
+    AI.CUSTOM(4); // wait for turnaround to finish if needed
+    // stick down
+    AI.STICK_X(0)
+    AI.STICK_Y(-0x7F, 1) // stick down for 1f
+    // wavedash (down + forward)
+    AI.STICK_Y(-0x7F) // full down
+    AI.STICK_X(0x7F, 1) // autofull towards opponent
+    AI.STICK_X(0)
+    AI.STICK_Y(0, 9)
     AI.PRESS_B(9)
     AI.UNPRESS_B(9)
+    AI.PRESS_B(9)
     AI.UNPRESS_B(9)
     AI.PRESS_B(9)
     AI.UNPRESS_B(0)
@@ -385,94 +453,90 @@ scope Kazuya {
     AI.add_cpu_input_routine(WAVEDASH_B)
 
     WAVEDASH_ELECTRIC:
+    // reset stick
     AI.UNPRESS_Z()
     AI.UNPRESS_A(0)
     AI.UNPRESS_B(0)
-    AI.STICK_X(0, 5)
-    AI.STICK_Y(0, 9)
-    dh 0xA07F // stick x = dash to opponent
-    AI.STICK_Y(0, 7) // 7 frame wait
     AI.STICK_X(0)
-    AI.STICK_Y(0, 2)
-    dh 0xA080 // stick x = dash to opponent
-    AI.STICK_Y(-0x28, 1)
+    AI.STICK_Y(0, 1)
+    // dash forward
+    AI.STICK_X(0x7F, 1) // dash towards opponent for 1f
+    AI.CUSTOM(4); // wait for turnaround to finish if needed
+    // stick down
+    AI.STICK_X(0)
+    AI.STICK_Y(-0x7F, 1) // stick down for 1f
+    // wavedash (down + forward)
+    AI.STICK_Y(-0x7F) // full down
+    AI.STICK_X(0x7F, 1) // autofull towards opponent
     AI.PRESS_A(1)
     AI.UNPRESS_A(0)
-    AI.STICK_Y(0, 0)
+    AI.STICK_X(0)
+    AI.STICK_Y(0)
     AI.END(); // End routine
     AI.add_cpu_input_routine(WAVEDASH_ELECTRIC)
 
-    WAVEDASH_MID_ELECTRIC:
+    WAVEDASH_4_ELECTRIC:
+    // reset stick
     AI.UNPRESS_Z()
     AI.UNPRESS_A(0)
     AI.UNPRESS_B(0)
-    AI.STICK_X(0, 5)
-    AI.STICK_Y(0, 9)
-    dh 0xA07F // stick x = dash to opponent
-    AI.STICK_Y(0, 7) // 7 frame wait
     AI.STICK_X(0)
-    AI.STICK_Y(0, 2)
-    dh 0xA080 // stick x = dash to opponent
-    AI.STICK_Y(-0x28, 5)
+    AI.STICK_Y(0, 1)
+    // dash forward
+    AI.STICK_X(0x7F, 1) // dash towards opponent for 1f
+    AI.CUSTOM(4); // wait for turnaround to finish if needed
+    // stick down
+    AI.STICK_X(0)
+    AI.STICK_Y(-0x7F, 1) // stick down for 1f
+    // wavedash (down + forward)
+    AI.STICK_Y(-0x7F) // full down
+    AI.STICK_X(0x7F, 5) // autofull towards opponent, wait 5f
     AI.PRESS_A(1)
     AI.UNPRESS_A(0)
-    AI.STICK_Y(0, 0)
+    AI.STICK_X(0)
+    AI.STICK_Y(0)
     AI.END(); // End routine
-    AI.add_cpu_input_routine(WAVEDASH_MID_ELECTRIC)
+    AI.add_cpu_input_routine(WAVEDASH_4_ELECTRIC)
 
-    WAVEDASH_DELAYED_ELECTRIC:
+    WAVEDASH_8_ELECTRIC:
+    // reset stick
     AI.UNPRESS_Z()
     AI.UNPRESS_A(0)
     AI.UNPRESS_B(0)
-    AI.STICK_X(0, 5)
-    AI.STICK_Y(0, 9)
-    dh 0xA07F // stick x = dash to opponent
-    AI.STICK_Y(0, 7) // 7 frame wait
     AI.STICK_X(0)
-    AI.STICK_Y(0, 2)
-    dh 0xA080 // stick x = dash to opponent
-    AI.STICK_Y(-0x28, 9)
+    AI.STICK_Y(0, 1)
+    // dash forward
+    AI.STICK_X(0x7F, 1) // dash towards opponent for 1f
+    AI.CUSTOM(4); // wait for turnaround to finish if needed
+    // stick down
+    AI.STICK_X(0)
+    AI.STICK_Y(-0x7F, 1) // stick down for 1f
+    // wavedash (down + forward)
+    AI.STICK_Y(-0x7F) // full down
+    AI.STICK_X(0x7F, 9) // autofull towards opponent
     AI.PRESS_A(1)
     AI.UNPRESS_A(0)
-    AI.STICK_Y(0, 0)
-    AI.END(); // End routine
-    AI.add_cpu_input_routine(WAVEDASH_DELAYED_ELECTRIC)
-
-    WAVEDASH_DTILTS:
-    AI.UNPRESS_Z()
-    AI.UNPRESS_A(0)
-    AI.UNPRESS_B(0)
-    AI.STICK_X(0, 5)
-    AI.STICK_Y(0, 9)
-    dh 0xA07F // stick x = dash to opponent
-    AI.STICK_Y(0, 7) // 7 frame wait
     AI.STICK_X(0)
-    AI.STICK_Y(0, 2)
-    dh 0xA080 // stick x = dash to opponent
-    AI.STICK_Y(-0x28, 9)
-    AI.STICK_Y(-0x28, 9)
-    AI.PRESS_A(5)
-    AI.UNPRESS_A(9)
-    AI.PRESS_A(5)
-    AI.UNPRESS_A(9)
-    AI.PRESS_A(5)
-    AI.UNPRESS_A(9)
-    AI.STICK_Y(0, 0)
+    AI.STICK_Y(0)
     AI.END(); // End routine
-    AI.add_cpu_input_routine(WAVEDASH_DTILTS)
+    AI.add_cpu_input_routine(WAVEDASH_8_ELECTRIC)
 
     TRIPLE_SPIN_KICKS:
     AI.UNPRESS_Z()
     AI.STICK_X(0, 0)
     AI.STICK_Y(0x28, 0)
     dh 0xA080 // stick x = tilt to opponent
-    AI.PRESS_A(9)
-    AI.UNPRESS_A(9)
-    AI.PRESS_A(9)
-    AI.UNPRESS_A(9)
-    AI.PRESS_A(9)
-    AI.UNPRESS_A(9)
-    AI.PRESS_A(9)
+    AI.PRESS_A(8)
+    AI.UNPRESS_A(8)
+    AI.PRESS_A(8)
+    AI.UNPRESS_A(8)
+    AI.PRESS_A(8)
+    AI.UNPRESS_A(8)
+    AI.PRESS_A(8)
+    AI.UNPRESS_A(8)
+    AI.PRESS_A(8)
+    AI.UNPRESS_A(8)
+    AI.PRESS_A(8)
     AI.UNPRESS_A(0)
     AI.END()
     AI.add_cpu_input_routine(TRIPLE_SPIN_KICKS)
@@ -492,34 +556,33 @@ scope Kazuya {
     CPU_ATTACKS:
     // Edit cpu attack behaviours
     // edit_attack_behavior(table, attack, override, start_hb, end_hb, min_x, max_x, min_y, max_y)
-    AI.add_attack_behaviour(JAB, 6, -562, 562, 298, 439)
-    AI.add_attack_behaviour(GRAB, 6, 0, 393, 329, 470) // todo: adjust grab ranges
-    AI.add_attack_behaviour(UTILT, 9, -492, 492, 309, 667)
-    AI.add_custom_attack_behaviour(AI.ROUTINE.WAVEDASH_B, 10, 396, 840, 104, 264)
+    AI.add_attack_behaviour(JAB, 6, -564, 564, 284, 424)
+    AI.add_attack_behaviour(GRAB, 6, 279, 429, 227, 377)
+    AI.add_attack_behaviour(UTILT, 9, -391, 391, 303, 664)
+    AI.add_custom_attack_behaviour(AI.ROUTINE.WAVEDASH_B, 3+1+12, 122+50, 540+50, 104, 264)
     AI.add_custom_attack_behaviour(AI.ROUTINE.DTILT_F, 10, 211, 555, 196, 632)
-    AI.add_attack_behaviour(FSMASH, 11, 391, 759, 331, 543)
-    AI.add_attack_behaviour(USMASH, 12, -529, 529, 193, 720)
-    AI.add_attack_behaviour(DTILT, 12, -622, 622, 114, 357)
-    AI.add_attack_behaviour(FTILT, 12, 153, 644, 311, 535)
-    AI.add_custom_attack_behaviour(AI.ROUTINE.WAVEDASH_ELECTRIC, 13, 88, 379, 315, 711)
-    AI.add_custom_attack_behaviour(AI.ROUTINE.WAVEDASH_MID_ELECTRIC, 13, 88+200, 379+200, 315, 711)
-    AI.add_custom_attack_behaviour(AI.ROUTINE.WAVEDASH_DELAYED_ELECTRIC, 13, 88+500, 379+500, 315, 711)
+    AI.add_attack_behaviour(FSMASH, 11, 407, 766, 328, 537)
+    AI.add_attack_behaviour(USMASH, 13, -529, 529, 192, 586)
+    AI.add_attack_behaviour(DTILT, 12, -638, 638, 105, 349)
+    AI.add_attack_behaviour(FTILT, 12, 149, 640, 309, 533)
+    AI.add_custom_attack_behaviour(AI.ROUTINE.WAVEDASH_ELECTRIC, 3+1+8, 93+50, 383+50, 312, 707)
+    AI.add_custom_attack_behaviour(AI.ROUTINE.WAVEDASH_4_ELECTRIC, 3+4+8, 93+200, 383+200, 312, 707)
+    AI.add_custom_attack_behaviour(AI.ROUTINE.WAVEDASH_8_ELECTRIC, 3+8+8, 93+400, 383+400, 312, 707)
     AI.add_custom_attack_behaviour(AI.ROUTINE.TRIPLE_SPIN_KICKS, 14, 232, 689, 298, 438)
-    AI.add_attack_behaviour(DSMASH, 17, 609, 1108, -34, 751)
-    AI.add_custom_attack_behaviour(AI.ROUTINE.WAVEDASH_DTILTS, 20, 211, 555, 196, 632) // TODO: check ranges
+    AI.add_attack_behaviour(DSMASH, 17, 606, 1118, -16, 772)
     AI.add_attack_behaviour(DSPG, 17, 329, 479, 219, 369)
     AI.add_attack_behaviour(NSPG, 26, 761, 1021, 362, 890)
     AI.add_custom_attack_behaviour(AI.ROUTINE.DASH_ATTACK, 16, 697, 1321, 315, 642)
 
     AI.END_ATTACKS() // end of grounded attacks
     
-    AI.add_attack_behaviour(UAIR, 4, 72, 398, 201, 617)
-    AI.add_attack_behaviour(NAIR, 6, 169, 364, 310, 431)
-    AI.add_attack_behaviour(DAIR, 8, 163, 370, 158, 311)
-    AI.add_custom_attack_behaviour(AI.ROUTINE.FAIR, 8, 94, 430, 244, 426)
-    AI.add_custom_attack_behaviour(AI.ROUTINE.BAIR, 11, -489, -141, 219, 421)
-    AI.add_attack_behaviour(DSPA, 17, 329, 479, 219, 369)
-    AI.add_attack_behaviour(NSPA, 26, 761, 1021, 362, 890)
+    AI.add_attack_behaviour(UAIR, 4, 29, 393, 266, 710)
+    AI.add_attack_behaviour(NAIR, 6, 169, 365, 294, 416)
+    AI.add_attack_behaviour(DAIR, 8, 105, 318, 81, 301)
+    AI.add_custom_attack_behaviour(AI.ROUTINE.FAIR, 8, 114, 449, 249, 431)
+    AI.add_custom_attack_behaviour(AI.ROUTINE.BAIR, 11, -420, -43, 271, 481)
+    AI.add_attack_behaviour(DSPA, 17, 72, 222, 219, 369)
+    AI.add_attack_behaviour(NSPA, 26, 92, 388, 380, 827)
     
     AI.END_ATTACKS() // end of aerial attacks
     OS.align(16)
@@ -527,6 +590,16 @@ scope Kazuya {
     // Set CPU behaviour
     Character.table_patch_start(ai_behaviour, Character.id.KAZUYA, 0x4)
     dw CPU_ATTACKS
+    OS.patch_end()
+
+    // Set CPU NSP long range behaviour
+    Character.table_patch_start(ai_long_range, Character.id.KAZUYA, 0x4)
+    dw AI.LONG_RANGE.ROUTINE.NSP_SHOOT
+    OS.patch_end()
+
+    // Custom custom long range action input
+    Character.table_patch_start(nsp_shoot_custom_move, Character.id.KAZUYA, 0x4)
+    dw AI.ROUTINE.KAZUYA_WAVEDASH
     OS.patch_end()
 
     // Set default costumes

@@ -8,6 +8,8 @@ definitions:
   series_logo_css: SONIC
   series_logo_model: SONIC
   select_pose: 4
+  break_the_targets: SONIC
+  board_the_platforms: SONIC
 
 shield_pose: "0x013A"
 

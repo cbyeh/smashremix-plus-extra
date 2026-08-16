@@ -14,6 +14,7 @@ scope MetaKnight {
     insert SLEEP_, "moveset/SLEEP.bin"; Moveset.GO_TO(SLEEP_)
 	
     insert run_,"moveset/run.bin"; Moveset.GO_TO(run_) // loops
+    insert IDLE_,"moveset/IDLE.bin"; Moveset.GO_TO(IDLE_) // loops
 
     // LIGHT_ITEM_PICKUP:; dw 0xBC000003;  dw 0x08000004; dw 0x3800009D; dw 0x58000001; dw 0
     // ITEM_DROP:; dw 0xBC000003;  dw 0x08000008; dw 0x54000001; dw 0
@@ -71,7 +72,7 @@ scope MetaKnight {
     }
 
     // Modify Action Parameters: Action, Animation, Moveset Data, Flags
-    Character.edit_action_parameters(METAKNIGHT, Action.Idle, File.METAKNIGHT_ANIM_IDLE, eyesNormal, 0x00000000)
+    Character.edit_action_parameters(METAKNIGHT, Action.Idle, File.METAKNIGHT_ANIM_IDLE, IDLE_, 0x00000000)
     Character.edit_action_parameters(METAKNIGHT, Action.Turn, File.METAKNIGHT_ANIM_TURN, turn, 0x00000000)
 
     Character.edit_action_parameters(METAKNIGHT, Action.DeadU, File.METAKNIGHT_ANIM_DAMAGEFALL, -1, -1)
@@ -165,7 +166,7 @@ scope MetaKnight {
     Character.edit_action_parameters(METAKNIGHT, Action.DamageFlyLow, File.METAKNIGHT_ANIM_DAMAGEFLYLW, eyesDamage, 0x0F000000)
     Character.edit_action_parameters(METAKNIGHT, Action.DamageFlyMid, File.METAKNIGHT_ANIM_DAMAGEFLYN, eyesDamage, 0x0F000000)
     Character.edit_action_parameters(METAKNIGHT, Action.WallBounce, File.METAKNIGHT_ANIM_DAMAGEFALL, eyesDamage, 0x0F000000)
-    Character.edit_action_parameters(METAKNIGHT, Action.Tumble, File.METAKNIGHT_ANIM_DAMAGEFALL, eyesNormal, 0x0F000000)
+    Character.edit_action_parameters(METAKNIGHT, Action.Tumble, File.METAKNIGHT_ANIM_DAMAGEFALL, eyesDamage, 0x0F000000)
     Character.edit_action_parameters(METAKNIGHT, Action.DamageFlyRoll, File.METAKNIGHT_ANIM_DAMAGEFLYROLL, eyesDamage, 0x0F000000)
     Character.edit_action_parameters(METAKNIGHT, Action.DamageFlyTop, File.METAKNIGHT_ANIM_DAMAGEFLYTOP, eyesDamage, 0x0F000000)
     Character.edit_action_parameters(METAKNIGHT, Action.DamageElec1, File.METAKNIGHT_ANIM_DAMAGEELEC, eyesDamage, 0x0F000000)
@@ -187,7 +188,7 @@ scope MetaKnight {
     Character.edit_action_parameters(METAKNIGHT, Action.InhaleCopied, File.METAKNIGHT_ANIM_DAMAGEFALL, -1, -1)
     Character.edit_action_parameters(METAKNIGHT, Action.InhalePulled, File.METAKNIGHT_ANIM_DAMAGEFALL, -1, -1)
     Character.edit_action_parameters(METAKNIGHT, Action.InhaleSpat, File.METAKNIGHT_ANIM_DAMAGEFALL, -1, -1)
-    Character.edit_action_parameters(METAKNIGHT, Action.ReviveWait, File.METAKNIGHT_ANIM_IDLE, -1, -1)
+    Character.edit_action_parameters(METAKNIGHT, Action.ReviveWait, File.METAKNIGHT_ANIM_IDLE, IDLE_, -1)
     Character.edit_action_parameters(METAKNIGHT, Action.ScreenKO, File.METAKNIGHT_ANIM_DAMAGEFALL, -1, -1)
     Character.edit_action_parameters(METAKNIGHT, Action.ShieldBreak, File.METAKNIGHT_ANIM_DAMAGEFLYTOP, -1, -1)
     Character.edit_action_parameters(METAKNIGHT, Action.ShieldBreakFall, File.METAKNIGHT_ANIM_DAMAGEFALL, -1, -1)
@@ -229,7 +230,7 @@ scope MetaKnight {
     Character.edit_action_parameters(METAKNIGHT, 0xE5,            File.METAKNIGHT_ANIM_ENTRYL,           ENTRY,          0x40800008)
 
     // Modify Menu Action Parameters              // Action // Animation           // Moveset Data // Flags
-    Character.edit_menu_action_parameters(METAKNIGHT, 0x0, File.METAKNIGHT_ANIM_IDLE, eyesNormal, -1)
+    Character.edit_menu_action_parameters(METAKNIGHT, 0x0, File.METAKNIGHT_ANIM_IDLE, IDLE_, -1)
     Character.edit_menu_action_parameters(METAKNIGHT, 0x1, File.METAKNIGHT_ANIM_WIN1, win1, 0x10800000)
     Character.edit_menu_action_parameters(METAKNIGHT, 0x2, File.METAKNIGHT_ANIM_WIN3, win3, -1)
     Character.edit_menu_action_parameters(METAKNIGHT, 0x3, File.METAKNIGHT_ANIM_WIN3, win3, -1)
@@ -347,6 +348,11 @@ scope MetaKnight {
     dw action_replace_map_
     OS.patch_end()
 
+    // Set crowd chant FGM.
+    Character.table_patch_start(crowd_chant_fgm, Character.id.METAKNIGHT, 0x2)
+    dh  FGM.CHANT
+    OS.patch_end()
+
     // Fix the logic for breaking out of ThrownDK since we're using it for our grabbed opponent
     scope capture_action_fix_: {
         jr ra
@@ -367,6 +373,83 @@ scope MetaKnight {
 
     // Shield colors for costume matching
     Character.set_costume_shield_colors(METAKNIGHT, BLUE, YELLOW, RED, GREEN, BLACK, PINK, NA, NA)
+
+    // @ Description
+    // Meta Knight's extra actions
+    scope Action {
+
+        string_0x0E1:; String.insert("ShuttleLoop")
+        string_0x0E2:; String.insert("ShuttleLoopAirStart")
+        string_0x0E3:; String.insert("ShuttleLoopAir")
+        string_0x0E4:; String.insert("Jump2")
+        string_0x0E5:; String.insert("Jump3")
+        string_0x0E6:; String.insert("Jump4")
+        string_0x0E7:; String.insert("Jump5")
+        string_0x0E8:; String.insert("Jump6")
+        string_0x0E9:; String.insert("e9")
+        string_0x0EA:; String.insert("ea")
+        string_0x0EB:; String.insert("MachTornadoStart")
+        string_0x0EC:; String.insert("MachTornadoLoop")
+        string_0x0ED:; String.insert("MachTornadoGroundEnd")
+        string_0x0EE:; String.insert("ee")
+        string_0x0EF:; String.insert("MachTornadoAirEnd")
+        string_0x0F0:; String.insert("f0")
+        string_0x0F1:; String.insert("f1")
+        string_0x0F2:; String.insert("JabLoop")
+        string_0x0F3:; String.insert("JabLoopEnd")
+        string_0x0F4:; String.insert("f4")
+        string_0x0F5:; String.insert("FTilt2")
+        string_0x0F6:; String.insert("FTilt3")
+        string_0x0F7:; String.insert("DimensionalCape")
+        string_0x0F8:; String.insert("DimensionalCancel")
+        string_0x0F9:; String.insert("DimensionalCapeAtkB")
+        string_0x0FA:; String.insert("DimensionalCapeAtkF")
+        string_0x0FB:; String.insert("DimensionalCapeAtk")
+        string_0x0FC:; String.insert("DimensionalCapeAir")
+        string_0x0FD:; String.insert("DimensionalCancelAir")
+        string_0x0FE:; String.insert("DimensionalCapeAirAtkB")
+        string_0x0FF:; String.insert("DimensionalCapeAirAtkF")
+        string_0x100:; String.insert("DimensionalCapeAirAtk")
+
+        action_string_table:
+        dw string_0x0E1
+        dw string_0x0E2
+        dw string_0x0E3
+        dw string_0x0E4
+        dw string_0x0E5
+        dw string_0x0E6
+        dw string_0x0E7
+        dw string_0x0E8
+        dw string_0x0E9
+        dw string_0x0EA
+        dw string_0x0EB
+        dw string_0x0EC
+        dw string_0x0ED
+        dw string_0x0EE
+        dw string_0x0EF
+        dw string_0x0F0
+        dw string_0x0F1
+        dw Action.COMMON.string_jabloop
+        dw Action.COMMON.string_jabloopend
+        dw string_0x0F4
+        dw string_0x0F5
+        dw string_0x0F6
+        dw string_0x0F7
+        dw string_0x0F8
+        dw string_0x0F9
+        dw string_0x0FA
+        dw string_0x0FB
+        dw string_0x0FC
+        dw string_0x0FD
+        dw string_0x0FE
+        dw string_0x0FF
+        dw string_0x100
+    }
+
+    // Set action strings
+    Character.table_patch_start(action_string, Character.id.METAKNIGHT, 0x4)
+    dw Action.action_string_table
+    OS.patch_end()
 
     // Used so that items work on the left hand on reused animations
     Character.table_patch_start(static_part, Character.id.METAKNIGHT, 0x8)

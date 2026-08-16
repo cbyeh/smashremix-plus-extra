@@ -53,13 +53,26 @@ sounds:
   "FFE8": vc_teeter
   "FFE9": AnnouncerCloud
   "FFEA": bike
+  "FFEB": heavygrab
 
 announcer_fgm: "FFE9"
+
+sounds_special:
+  "FFE5":
+    fgm_type: CHANT
+    length: 300
+  "FFE7":
+    fgm_type: SLEEP
+    length: "0x120"
 
 attributes:
   death_fgm: "FFF4"
   star_ko_fgm: "FFF7"
   damaged_fgm: "FFF3"
+  heavy_lift_fgm: "FFEB"
+  attack_sfx_1: "FFF0"
+  attack_sfx_2: "FFF1"
+  attack_sfx_3: "FFF2"
 
 # Files 6, 7, 8, 9
 # [Filename (without .bin), InternalFileTableOffsetBytes, InternalFileResourceOffsetBytes]

@@ -203,3 +203,28 @@ def add_to_label(file: str, label: str, entries: List[str]) -> None:
 
     with open(file, 'w') as f:
         f.writelines(lines)
+
+def add_to_label_on_empty(file: str, label: str, entries: List[str]) -> None:
+    """Insert entries at the first blank line under a label in an ASM file."""
+    with open(file, 'r') as f:
+        lines = f.readlines()
+
+    label_found = False
+    insert_index = None
+    last_indentation = ''
+
+    for i, line in enumerate(lines):
+        if f"{label}:" in line:
+            label_found = True
+            last_indentation = line[:len(line) - len(line.lstrip())]
+            continue
+        if label_found and line.strip() == '':
+            insert_index = i
+            break
+
+    if insert_index:
+        new_entries = [f'{last_indentation}{entry}\n' for entry in entries]
+        lines[insert_index:insert_index] = new_entries
+
+    with open(file, 'w') as f:
+        f.writelines(lines)

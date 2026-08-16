@@ -38,11 +38,11 @@ files: [
 # a lot of times these are GFX used for projectiles ("hitbox" file)
 append_files:
   [
-    ["c4_gfx", "0134", "3FFFC"],
-    ["nikita_gfx", "0134", "3FFFC"],
+    ["c4_gfx", "0404", "3FFFC"],
+    ["nikita_gfx", "0404", "3FFFC"],
     ["usmash_gfx", "0058", "3FFFC"],
     ["cypher_gfx", "0134", "3FFFC"],
-    ["grenade_gfx", "0134", "3FFFC"],
+    ["grenade_gfx", "0404", "3FFFC"],
   ]
 
 tag_team_preloads: ["merged_file_0", "grenade_hitbox"]
@@ -79,6 +79,18 @@ sounds:
   "FFEC": teeter
   "FFED": grenadepull
   "FFEE": AnnouncerSnake
+  "FFEF": entry
+  "EEE0": CHANT
+  "EEE1": Heavygrab
+  "EEE2": cypherloop
+
+sounds_special:
+  "EEE0":
+    fgm_type: CHANT
+    length: 280
+  "FFFB":
+    fgm_type: SLEEP
+    length: "0x180"
 
 announcer_fgm: "FFEE"
 
@@ -89,9 +101,10 @@ attributes:
   attack_sfx_1: "FFF0"
   attack_sfx_2: "FFF1"
   attack_sfx_3: "FFF2"
+  heavy_lift_fgm: "EEE1"
   size_multi: 1.11
   walk_speed_multi: 0.3
-  traction: 1.8
+  traction: 1.2
   dash_speed: 50.0
   dash_deceleration: 2.0
   run_speed: 40.0
