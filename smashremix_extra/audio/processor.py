@@ -1,12 +1,14 @@
 import hashlib
 import os
 import re
+import struct
 import yaml
 import lineinfile
 from typing import List, Optional
 
 from smashremix_extra.logger import logger
 from smashremix_extra.content_filter import filter_folders
+from smashremix_extra.audio import cseq
 
 # ROM space reserved between original_extra.z64 and MIDI_BANK for the custom
 # ASM, midi_memory_block and file_table, up to custom_heap. Remix reserves 4 MB,
@@ -196,7 +198,7 @@ class AudioProcessor:
             inserter=lineinfile.AfterLast(r"^\s*add_master_volume_override\(")
         )
 
-    def alias_remix_midis(self) -> None:
+    def alias_remix_midis(self, external_midis: List[str]) -> None:
         """
         Point every Remix MIDI at a vanilla SSB track instead of inserting it
         (extra_content.yaml: remix_music: vanilla). Frees ~3 MiB of ROM.
@@ -206,7 +208,9 @@ class AudioProcessor:
         is a vanilla track's. Victory themes go to a vanilla victory fanfare,
         menu tracks to the vanilla main menu, the rest to a vanilla stage track
         from the same series where there is one. insert_external_midi (EXTRA
-        victory themes and music packs) is untouched, as are instruments.
+        victory themes and music packs, passed as external_midis) is
+        untouched, and only the Remix instruments those MIDIs use keep their
+        sample data.
         """
         path = "src/midi.asm"
         with open(path, "r", encoding="utf-8") as f:
@@ -291,10 +295,40 @@ class AudioProcessor:
             "        if ALIAS_SIZE_{file_name} > largest_midi {\n"
             "            global variable largest_midi(ALIAS_SIZE_{file_name})\n"
         )
+        # Remix instruments (0x2B-0x46) are only needed by MIDIs that still
+        # carry their own data. Keep the instrument entries (MIDIs address them
+        # by number) but replace unused ones' sample data with 16 bytes of
+        # silence. If any remaining MIDI can't be parsed, keep them all.
+        keep = set(range(0x2B, 0x47))
+        try:
+            needed = set()
+            for p in external_midis:
+                with open(p, "rb") as f:
+                    needed |= cseq.programs(f.read())
+            keep = {n for n in needed if n >= 0x2B}
+        except (OSError, cseq.Err, IndexError, struct.error) as e:
+            logger.warning(f"remix_music: vanilla: keeping all Remix instruments ({e})")
+        aliases += [f"    global define KEEP_INST_{n}({int(n in keep)})" for n in range(0x2B, 0x47)]
+        old_sample = (
+            "        insert SAMPLE_RAW_{inst_num}_{sample_num}, \"../src/music/instruments/{SAMPLE_NAME_{inst_num}_{sample_num}}.aifc\", 0x100, SAMPLE_LENGTH_{inst_num}_{sample_num} - 0x0008\n"
+        )
+        new_sample = (
+            "        if {KEEP_INST_{inst_num}} == 1 {\n"
+            "            insert SAMPLE_RAW_{inst_num}_{sample_num}, \"../src/music/instruments/{SAMPLE_NAME_{inst_num}_{sample_num}}.aifc\", 0x100, SAMPLE_LENGTH_{inst_num}_{sample_num} - 0x0008\n"
+            "            evaluate sample_len(SAMPLE_LENGTH_{inst_num}_{sample_num} - 0x0008)\n"
+            "        } else {\n"
+            "            fill    0x10                // +EXTRA: no remaining MIDI uses this instrument\n"
+            "            evaluate sample_len(0x10)\n"
+            "        }\n"
+        )
+        old_len = "        dw      SAMPLE_LENGTH_{inst_num}_{sample_num} - 0x0008               // length of raw data\n"
+        new_len = "        dw      {sample_len}                                               // length of raw data\n"
+
         anchor = "    move_dream_land_midi()\n"
         # Only the 8-argument insert_midi macro matches: insert_external_midi
         # uses {midi_id} rather than {file_name}.
-        for old, new in ((old_body, new_body), (old_largest, new_largest)):
+        for old, new in ((old_body, new_body), (old_largest, new_largest),
+                         (old_sample, new_sample), (old_len, new_len)):
             if old not in asm:
                 logger.error("remix_music: vanilla: midi.asm layout changed; update alias_remix_midis()")
                 raise SystemExit(1)
@@ -306,7 +340,8 @@ class AudioProcessor:
 
         with open(path, "w", encoding="utf-8") as f:
             f.write(asm)
-        print(f"remix_music: vanilla -- aliased {len(aliases)} Remix MIDIs to vanilla tracks")
+        print(f"remix_music: vanilla -- aliased {len(calls)} Remix MIDIs to vanilla tracks; "
+              f"keeping Remix instruments {sorted(hex(n) for n in keep)}")
 
     def patch_bgm_asm(self) -> None:
         """Patch BGM.asm with menu music track definitions."""

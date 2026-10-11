@@ -757,7 +757,10 @@ class CharacterAppender:
             self.char_proc.midi_master_volume_overrides,
         )
         if self.remix_music == "vanilla":
-            self.audio_proc.alias_remix_midis()
+            # MIDIs still inserted with their own data: EXTRA victory themes and music packs
+            external = re.findall(r"insert_external_midi\(\w+, \.\./([^,]+),",
+                                  "\n".join(self.char_proc.victory_theme_strings + self.audio_proc.midi_files_list))
+            self.audio_proc.alias_remix_midis([f"{p}.bin" for p in external])
         elif self.remix_music != "keep":
             print(f"ERROR: extra_content.yaml remix_music must be 'keep' or 'vanilla', got {self.remix_music!r}")
             sys.exit(1)
