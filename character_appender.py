@@ -473,14 +473,18 @@ class CharacterAppender:
         # custom_heap actually lands, so this has to be checked at assemble time
         # rather than from Python. Without it, an overflow silently overwrites
         # the MIDI bank and starves the runtime heap.
+        # Boot.asm DMAs ((custom_heap - base) >> 16) + 1 64KB blocks, so check
+        # that copy's end, not custom_heap itself; otherwise the tail of the copy
+        # loads MIDI bank bytes into RAM above custom_heap.
+        boot_dma = "((((custom_heap - 0x80400000) >> 16) + 1) << 16)"
         lineinfile.add_line_to_file(
             filepath="main.asm",
             line=(
                 "\n// +EXTRA: guard against the ASM region colliding with MIDI_BANK\n"
                 'print "+EXTRA: ASM region uses ", custom_heap - 0x80400000, '
-                f'" of ", MIDI.MIDI_BANK - 0x{original_size:08X}, " bytes\\n"\n'
-                "if custom_heap > (0x80400000 + MIDI.MIDI_BANK - "
-                f"0x{original_size:08X}) {{\n"
+                f'" (boot DMA ", {boot_dma}, ") of ", '
+                f'MIDI.MIDI_BANK - 0x{original_size:08X}, " bytes\\n"\n'
+                f"if {boot_dma} > (MIDI.MIDI_BANK - 0x{original_size:08X}) {{\n"
                 '    error "ASM region overflows MIDI_BANK: reduce content or '
                 'raise ASM_HEADROOM in smashremix_extra/audio/processor.py"\n'
                 "}"
