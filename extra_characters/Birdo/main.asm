@@ -166,6 +166,7 @@ scope Birdo {
     Character.edit_menu_action_parameters(BIRDO,        0x4,              File.BIRDO_ANIM_VICTORY2,        Win2,                 -1)
     Character.edit_menu_action_parameters(BIRDO,        0x5,              File.BIRDO_ANIM_CLAP,            Clap,                 -1)
     Character.edit_menu_action_parameters(BIRDO,        0xD,              File.BIRDO_ANIM_1PPOSE,          -1,                   -1)
+    Character.edit_menu_action_parameters(BIRDO,        0xE,              File.BIRDO_ANIM_CPUPOSE,         CPUPose,              -1)
 
 
     // Set crowd chant FGM.

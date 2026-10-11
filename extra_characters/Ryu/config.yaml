@@ -56,12 +56,22 @@ sounds:
   "FFE4": SEYA
   "FFE5": YA
   "FFE6": AnnouncerRyu
+  "FFE7": CHANT
+  "FFE8": DIE2
+
+sounds_special:
+  "FFE7":
+    fgm_type: CHANT
+    length: 280
 
 announcer_fgm: "FFE6"
 
 attributes:
-  death_fgm: "FFE2"
-  star_ko_fgm: "FFE1"
+  death_fgm: "FFE8"
+  star_ko_fgm: "FFE2"
   damaged_fgm: "FFE1"
   ledge_grab_y: 600
   gravity: 3.6
+  attack_sfx_1: "FFE0"
+  attack_sfx_2: "FFE0"
+  attack_sfx_3: "FFE0"

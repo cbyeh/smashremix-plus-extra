@@ -8,7 +8,7 @@ definitions:
   series_logo_css: GAME_AND_WATCH
   select_pose: 1
 
-# shield_pose: "0x12A"
+shield_pose: ["008C", "3FFFC"]
 
 files: [
   ["projectile_hitbox", "3FFFC", "0000"],
@@ -64,6 +64,15 @@ sounds:
   "0588": UPB
   "0589": NEUTRALB
   "058A": DOWNB
+  "058B": SLEEP
+
+sounds_special:
+  "0581":
+    fgm_type: CHANT
+    length: 280
+  "058B":
+    fgm_type: SLEEP
+    length: "0x120"
 
 cloaking_fix:
   fix_logic: GameAndWatch2D.CloakingFix.fix_
@@ -183,4 +192,4 @@ attributes:
   gravity: 2.450
   max_fall_speed: 45.000
   weight: 1.220
-  shield_size: 280.000
+  shield_size: 310.000

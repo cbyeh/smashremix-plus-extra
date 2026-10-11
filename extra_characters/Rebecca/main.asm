@@ -108,6 +108,8 @@ scope Rebecca {
     Character.edit_action_parameters(REBECCA, Action.ThrowB,                -1,                                     THROW_B_,                           -1)
     Character.edit_action_parameters(REBECCA, Action.DTilt,                 File.WOLF_DTILT,                        DTILT,                              -1)
     Character.edit_action_parameters(REBECCA, Action.Teeter,                -1,                                     TEETER,                             -1)
+    Character.edit_action_parameters(REBECCA, Action.AttackAirU,            File.PEPPY_UAIR,                        UAIR,                               -1)
+    Character.edit_action_parameters(REBECCA, Action.AttackAirF,            -1,                                     FAIR,                               -1)
 
     Character.edit_action_parameters(REBECCA,    Action.FallSpecial,       File.WOLF_FALLSPECIAL,    -1,                       -1)
 

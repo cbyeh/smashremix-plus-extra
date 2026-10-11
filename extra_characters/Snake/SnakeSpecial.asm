@@ -265,6 +265,8 @@ scope SnakeSpecial {
 
             lli t0, 0x5
             sw t0, 0x0268(v0) // set duration to 5
+			addiu	t0, r0, 1
+			sw		t0, 0x0100(v0)	// set hitbox state to 1 to prevent it from smearing
 
             // refresh hitbox
             sw r0, 0x0214(v0) // reset hit object pointer 1
@@ -273,7 +275,7 @@ scope SnakeSpecial {
             sw r0, 0x022C(v0) // reset hit object pointer 4
 
             // Hitbox size
-            lui at, 0x43AF // 350
+            lui at, 0x4396 // 300
             sw at, 0x0128(v0) // save new hitbox size
 
             // Hitbox damage
@@ -1604,6 +1606,14 @@ scope SnakeSpecial {
                     ori at, at, 0x20
                     sb at, 0x2CF(a1)
 
+                    _enable_pickup:
+                    // only grabbable once actually thrown/released, not
+                    // while still being held/pulled by Snake
+                    lw a1, 0x84(a0) // a1 = item struct
+                    lbu at, 0x2CE(a1)
+                    ori at, at, 0x0080
+                    sb at, 0x2CE(a1)
+
                     _cleanup:
                     lw a0, 0x4(sp) // restore player object
                     lw a1, 0x84(a0) // a1 = player struct
@@ -2354,6 +2364,11 @@ scope SnakeSpecial {
     }
 
     scope Cypher: {
+        // Cypher's damage-based armor threshold (see Hang scope). Shared with
+        // Start.goto_next, which primes fp->damage_resist to this same value
+        // before Hang's first frame ever runs.
+        constant DAMAGE_RESIST_THRESHOLD(7)
+
         // Refreshes USP flag when hit
         scope Refresh: {
             jr ra
@@ -2500,6 +2515,14 @@ scope SnakeSpecial {
                 lui a3, 0x3F80 // a3(frame speed multiplier) = 1.0x
                 jal 0x800E6F24 // change action
                 sw r0, 0x0010(sp) // argument 4 = 0
+
+                // Prime damage_resist before Hang.main's first frame can read it, so it
+                // doesn't mistake leftover/garbage data for an already-absorbed hit.
+                lw t0, 0x0020(sp) // t0 = player object
+                lw t0, 0x0084(t0) // t0 = player struct
+                lli t1, DAMAGE_RESIST_THRESHOLD
+                sw t1, 0x30(t0) // fp->damage_resist
+
                 jal 0x800E0830 // unknown common subroutine
                 lw a0, 0x0020(sp) // a0 = player object
 
@@ -2557,6 +2580,33 @@ scope SnakeSpecial {
 
                 lw s0, 0x0084(a0) // s0 = player struct
 
+                _credit_absorbed_damage:
+                // fp->damage_resist is reset to DAMAGE_RESIST_THRESHOLD every frame below. If a hit
+                // landed since then, the native armor consumes it out of this same field instead of
+                // applying percent damage - so whatever it's been brought down to by the time we get
+                // back here next frame tells us how much damage was silently absorbed.
+                lw t0, 0x30(s0) // t0 = damage_resist as left by any hit since our last reset
+                slti at, t0, DAMAGE_RESIST_THRESHOLD // at = 1 if a hit brought it below our last reset value
+                beqz at, _set_armor // skip if unchanged (no hit landed)
+                nop
+                addiu t2, r0, DAMAGE_RESIST_THRESHOLD // t2 = threshold
+                subu t2, t2, t0 // t2 = threshold - remaining value = damage absorbed
+
+                sw a0, 0x0018(sp) // save player object across these calls
+
+                or a1, t2, r0 // a1 = damage absorbed
+                jal Character.add_percent_ // adds to percent AND refreshes the HUD display, unlike a raw field write
+                or a0, s0, r0 // a0 = player struct
+
+                // Armor bypasses the whole native hit pipeline, so hitlag never gets set either - apply it manually
+                or a0, t2, r0 // a0 = damage absorbed
+                lw a1, 0x24(s0) // a1 = current action
+                jal 0x800EA1C0 // gmCommon_DamageCalcHitLag(s32 damage, s32 status_id, f32 hitlag_mul)
+                lui a2, 0x3F80 // a2 = hitlag multiplier 1.0
+                sw v0, 0x40(s0) // apply hitlag to snake
+
+                lw a0, 0x0018(sp) // restore player object for the rest of this routine
+
                 _set_armor:
                 // Cypher armor is non-cumulative. Which means multiple weaker hits won't sum up to break it.
                 // fp->is_damage_resist = TRUE; (enable damage based armor)
@@ -2564,8 +2614,8 @@ scope SnakeSpecial {
                 ori at, at, 0x20
                 sb at, 0x191(s0)
 
-                lli at, 0x7
-                sw at, 0x30(s0) // fp->damage_resist = 7 (set damage based armor)
+                lli at, DAMAGE_RESIST_THRESHOLD
+                sw at, 0x30(s0) // fp->damage_resist (set damage based armor)
 
                 _set_usp_flag:
                 // reinforce the usp flag in case we started while grounded

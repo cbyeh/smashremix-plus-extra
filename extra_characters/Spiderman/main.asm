@@ -257,7 +257,7 @@ scope Spiderman {
     Character.edit_action_parameters(SPIDERMAN, Action.AttackAirB,             File.SPIDERMAN_ANIM_ATTACKAIRB,            BACK_AERIAL,              -1)
     Character.edit_action_parameters(SPIDERMAN, Action.AttackAirU,             File.SPIDERMAN_ANIM_ATTACKAIRU,            UP_AERIAL,                -1)
     Character.edit_action_parameters(SPIDERMAN, Action.AttackAirD,             File.SPIDERMAN_ANIM_ATTACKAIRD,            DOWN_AERIAL,              -1)
-    Character.edit_action_parameters(SPIDERMAN, Action.LandingAirF,            File.SPIDERMAN_ANIM_LANDINGAIRF,           -1,                       -1)
+    Character.edit_action_parameters(SPIDERMAN, Action.LandingAirF,            File.SPIDERMAN_ANIM_LANDINGAIRF,           FORWARD_AERIAL_LANDING,   -1)
     Character.edit_action_parameters(SPIDERMAN, Action.LandingAirB,            File.SPIDERMAN_ANIM_LANDINGAIRB,           -1,                       -1)
     Character.edit_action_parameters(SPIDERMAN, Action.LandingAirX,            File.SPIDERMAN_ANIM_LANDING,               -1,                       -1)
     Character.edit_action_parameters(SPIDERMAN, Action.AppearLeft1,            File.SPIDERMAN_ANIM_ENTRY_1_LEFT,          ENTRY_1,                  0x40000008)

@@ -128,6 +128,7 @@ scope flashbang_stage_setting_: {
     sw t6, 0x02C0(v1) // store duration\
     lli t7, 0x0004 // ~
     sw t7, 0x0354(v1) // unknown value(bit field?) = 0x00000004
+    sw r0, 0x0350(v1) // clear pending explosion flag
 
     sw r0, 0x002C(v1) // x velocity = 0
     sw r0, 0x0030(v1) // y velocity = 0
@@ -240,9 +241,8 @@ scope unreleased_main: {
         // if here, we're supposed to be released
         lli at, 0x1
         sw at, 0x1DC(s0) // set times landed to 1 so it doesn't bounce on drop
-        li a1, flashbang_item_states
-        jal 0x80172EC8 // change item state
-        addiu a2, r0, 0x0003 // state = 3(thrown)
+        jal flashbang_begin_main_ // use the regular drop function (also re-enables pickup)
+        or a0, s1, r0 // a0 = item object
         b _end
         nop
 
@@ -326,6 +326,20 @@ scope flashbang_main_: {
 
     lw s0, 0x0084(a0) // s0 = item special struct
     or s1, a0, r0 // s1 = item object
+
+    // if a hit left us with a pending explosion, this is the first frame this
+    // function has run since then (hitlag_tics gates proc_update, so we don't
+    // get called again until hitlag ends) - explode now
+    lw t0, 0x0350(s0) // t0 = pending explosion flag
+    beqz t0, _no_pending_explosion
+    nop
+    sw r0, 0x0350(s0) // clear flag
+    jal flashbang_explosion_ // begin explosion
+    or a0, s1, r0
+    b _end
+    nop
+    _no_pending_explosion:
+
     li s2, flashbang_attributes.struct // s2 = flashbang_attributes.struct
     lw at, 0x0108(s0) // at = kinetic state
     beq at, r0, _update_speed_ground // branch if kinetic state = grounded
@@ -549,7 +563,7 @@ scope flashbang_exploding_main_: {
     // hitbox for frame 2+, bigger and doesn't hit the owner
     lw at, 0x1D8(s0) // get last owner before explosion
     sw at, 0x8(s0) // set as current owner
-    lui t2, 0x4407 // 540
+    lui t2, 0x43FA // 500
     sw t2, 0x0138(s0) // hitbox size
 
     jal flashbang_explosion_hitboxes_ // subroutine which handles explosion hitboxes
@@ -593,12 +607,12 @@ scope flashbang_begin_main_: {
     sw ra, 0x0014(sp) // ~
     sw a0, 0x0018(sp) // store ra, a0
     lw a0, 0x0084(a0) // a0 = item special struct
-    // lbu t0, 0x02CE(a0) // t0 = unknown bitfield
-    // andi t0, t0, 0xFF7F // disable item pickup bit
-    // sb t0, 0x02CE(a0) // store updated bitfield
+    lbu t0, 0x02CE(a0) // t0 = unknown bitfield
+    ori t0, t0, 0x0080 // enable item pickup bit
+    sb t0, 0x02CE(a0) // store updated bitfield
     lli at, 0x0001 // ~
     jal 0x80173F78 // bomb subroutine, sets kinetic state value
-    sw at, 0x010C(a0) // enable hitbox
+    sw r0, 0x010C(a0) // disable hitbox
     jal 0x80185CD4 // bomb subroutine, sets an unknown value to 0x1
     lw a0, 0x0018(sp) // a0 = item object
     lw a0, 0x0018(sp) // a0 = item object
@@ -749,7 +763,7 @@ scope flashbang_begin_explosion_: {
     addiu t2, r0, DAMAGE_TYPE // ~
     sw t2, 0x011C(v0) // save damage type as STUN
     // frame 1 hitbox, smaller and hits the owner
-    lui t2, 0x43AF // 350
+    lui t2, 0x4396 // 300
     sw t2, 0x0138(v0) // hitbox size
     addiu at, r0, EXPLODE_DAMAGE
     sw at, 0x0110(v0) // set damage to EXPLODE_DAMAGE
@@ -870,9 +884,92 @@ scope flashbang_hitbox_collision_: {
     lbu at, 0x000D(t1) // at = player port (for combo ownership)
 
     _continue:
-    jal flashbang_explosion_ // begin explosion
-    lw a0, 0x0024(sp) // // a0 = item object
+    // damage_gobj (above) only ever gives the attacker's OWNING PLAYER, not
+    // the attacking item - confirmed both in-game and in the engine source
+    // for itProcessUpdateDamageStatItem/Weapon, which always write
+    // owner_gobj there regardless of whether a fighter or an item hit us.
+    // So instead, find out who actually hit us by walking the live item
+    // list (head at 0x80046700, same as Smashketball.asm/Hazards.asm) and
+    // checking each item's attack_records for our own object - that's the
+    // same array flashbang_main_'s _hitbox_timer already resets by hand at
+    // 0x224/0x22C/0x234/0x23C.
+    sw r0, 0x002C(sp) // 0x002C(sp) = attacker item object found so far (0 = none)
+    lw t4, 0x0024(sp) // t4 = our own item object
+    OS.read_word(0x80046700, t0) // t0 = live item list head
 
+    _find_attacker_loop:
+    beqz t0, _find_attacker_end // stop once we've walked the whole list
+    nop
+    beq t0, t4, _find_attacker_next // skip ourselves
+    nop
+
+    lw t1, 0x0084(t0) // t1 = candidate item's special struct
+    lw t2, 0x0224(t1) // t2 = candidate's attack record 0 victim
+    beq t2, t4, _find_attacker_found
+    nop
+    lw t2, 0x022C(t1) // t2 = candidate's attack record 1 victim
+    beq t2, t4, _find_attacker_found
+    nop
+    lw t2, 0x0234(t1) // t2 = candidate's attack record 2 victim
+    beq t2, t4, _find_attacker_found
+    nop
+    lw t2, 0x023C(t1) // t2 = candidate's attack record 3 victim
+    bne t2, t4, _find_attacker_next
+    nop
+
+    _find_attacker_found:
+    sw t0, 0x002C(sp) // remember which item hit us
+    b _find_attacker_end
+    nop
+
+    _find_attacker_next:
+    lw t0, 0x0004(t0) // t0 = next item in the list
+    b _find_attacker_loop
+    nop
+
+    _find_attacker_end:
+    lw t0, 0x002C(sp) // t0 = attacker item object, or 0 if a fighter/weapon hit us instead
+    beqz t0, _explode // no item attacker found - explode as normal
+    nop
+    lw t1, 0x0084(t0) // t1 = attacker's item special struct
+    lw t2, 0x000C(t1) // t2 = attacker's item ID
+    li t3, SnakeSpecial.GrenadeItem.id // t3 = our own item ID
+    bne t2, t3, _explode // hit by some other item, not another grenade - explode as normal
+    nop
+    lw t2, 0x011C(t1) // t2 = attacker's current hitbox element/type
+    li t3, Damage.id.FIRE // t3 = FIRE (only set on the explosion hitbox)
+    beq t2, t3, _explode // attacker is currently exploding - let it detonate us too
+    nop
+
+    // hit by another grenade's flying contact hitbox - bounce instead of exploding
+    lw a0, 0x0024(sp) // a0 = item object
+    jal flashbang_hurtbox_collision_ // reuse the shield/hurtbox bounce physics
+    nop
+    b _end
+    nop
+
+    _explode:
+    // Force the aerial/thrown state so being hit always runs through
+    // flashbang_main_ (which handles the pending-explosion check below)
+    // regardless of the state we were hit in - this also sidesteps
+    // unreleased_main's _check_owner_state, which assumes the owner is
+    // still Snake, but we just overwrote it with the attacker above.
+    lw a0, 0x0024(sp) // a0 = item object
+    li a1, flashbang_item_states // a1 = object state base address
+    jal 0x80172EC8 // change item state
+    addiu a2, r0, 0x0003 // state = 3 (thrown/aerial)
+
+    // Don't explode immediately - the engine will automatically put the item
+    // into hitlag based on the damage it just took (ip->damage_lag, set right
+    // before this callback runs, gets converted to ip->hitlag_tics right after
+    // it returns). Just mark the explosion as pending; flashbang_main_ won't
+    // run again until hitlag ends, so it'll fire on the frame right after.
+    lw a0, 0x0024(sp) // a0 = item object
+    lw t0, 0x0084(a0) // t0 = item special struct
+    lli t1, 1
+    sw t1, 0x0350(t0) // mark explosion as pending
+
+    _end:
     lw ra, 0x0020(sp) // load ra
     addiu sp, sp, 0x0050 // deallocate stack space
     jr ra
@@ -898,6 +995,7 @@ scope throw_initial_: {
     lw v1, 0x84(a0)
     addiu at, r0, 1
     sw at, 0x248(v1) // enable hurtbox
+    sw at, 0x010C(v1) // enable hitbox - actually being thrown as an item, unlike a plain release/drop
     addiu at, r0, INITIAL_DAMAGE
     sw at, 0x110(v1) // set damage to INITIAL_DAMAGE
 

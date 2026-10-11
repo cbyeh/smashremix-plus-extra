@@ -58,6 +58,15 @@ sounds:
   "0588": UPB
   "0589": NEUTRALB
   "058A": DOWNB
+  "058B": SLEEP
+
+sounds_special:
+  "0581":
+    fgm_type: CHANT
+    length: 280
+  "058B":
+    fgm_type: SLEEP
+    length: "0x120"
 
 announcer_fgm: "057B"
 

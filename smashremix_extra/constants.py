@@ -1,6 +1,12 @@
+import os
 from dataclasses import dataclass
 
-SMASHREMIX_PATH = "smashremix"
+# Resolved relative to this file rather than CWD, since the smashremix
+# submodule ships alongside this package and callers may run the appender
+# from a different working directory (e.g. a content repo that pulls this
+# in as a submodule, with its own extra_characters/build/src at CWD).
+SMASHREMIX_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "smashremix")
 
 VARIANT_TYPES = ["dl", "omega", "remix", "remix2", "remix3", "remix4", "remix5", "remix6"]
 
@@ -38,6 +44,40 @@ SHIELD_POSES = {
 }
 
 TWELVECB_DEFEAT = {
+    "MARIO": "0x222",
+    "METAL": "0x222",
+    "FOX": "0x2B1",
+    "DONKEY": "0x34F",
+    "SAMUS": "0x3E8",
+    "LUIGI": "0x222",
+    "LINK": "0x48A",
+    "KIRBY": "0x51D",
+    "JIGGLYPUFF": "0x51D",
+    "CAPTAIN": "0x617",
+    "NESS": "0x6AF",
+    "PIKACHU": "0x80E",
+    "YOSHI": "0x745",
+    "BOSS": "0"
+}
+
+SP_DUO_POSES = {
+    "MARIO": "0x170",
+    "METAL": "0x171",
+    "FOX": "File.FOX_DUO_POSE",
+    "DONKEY": "File.DK_DUO_POSE",
+    "SAMUS": "File.SAMUS_DUO_POSE",
+    "LUIGI": "0x17B",
+    "LINK": "File.LINK_DUO_POSE",
+    "KIRBY": "File.KIRBY_DUO_POSE",
+    "JIGGLYPUFF": "0x51D",
+    "CAPTAIN": "0x617",
+    "NESS": "File.NESS_DUO_POSE",
+    "PIKACHU": "File.PIKA_DUO_POSE",
+    "YOSHI": "0x1C8",
+    "BOSS": "0"
+}
+
+SP_TEAM_POSES = {
     "MARIO": "0x222",
     "METAL": "0x222",
     "FOX": "0x2B1",

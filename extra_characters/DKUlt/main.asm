@@ -69,6 +69,11 @@ scope DKUlt {
     dw DKUltSpecial.DSP_AIR.initial
     OS.patch_end()
 
+    // Set crowd chant FGM.
+    Character.table_patch_start(crowd_chant_fgm, Character.id.DKULT, 0x2)
+    dh 0x25B
+    OS.patch_end()
+
     // Modify Actions            // Action              // Staling ID   // Main ASM                 // Interrupt/Other ASM          // Movement/Physics ASM         // Collision ASM
 
     // Set default costumes

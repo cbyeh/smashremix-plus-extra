@@ -1,0 +1,10 @@
+reflector-graphic-patch1:
+  path: 'src/Sonic/SonicSpecial.asm'
+  line: [
+    "lli     at, Character.id.KNUCKLES   // at = id.KNUCKLES",
+    "beq     t6, at, _sonic              // branch if character = Knuckles"
+  ]
+  prefix: "\t\t"
+  suffix: "\n\t\t"
+  type: AfterFirst
+  where: '.*lw      t6, 0x0008\(a1\)              \/\/ t6 = character id'  # regex match

@@ -1,4 +1,5 @@
 import argparse
+import os
 
 TEMPLATE = """[{}-{}-C:45]
 Good Name=SmashRemix2.0.1 {}
@@ -22,7 +23,9 @@ def main(filename):
     hex1 = val1.hex().upper()
     hex2 = val2.hex().upper()
 
-    with open("version.txt", 'r', encoding='utf-8') as f:
+    version_txt_path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "version.txt")
+    with open(version_txt_path, 'r', encoding='utf-8') as f:
         version = f.read()
 
     print(TEMPLATE.format(hex1, hex2, version))

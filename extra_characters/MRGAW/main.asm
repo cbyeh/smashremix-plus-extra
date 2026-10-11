@@ -51,7 +51,7 @@ scope GameAndWatch2D {
         constant Fire(0x0E1)
         constant FireAir(0x0E2)
         constant JudgeBegin(0x0E3)
-		constant JudgeBeginAir(0x0E4)
+	constant JudgeBeginAir(0x0E4)
         constant Judge1(0x0E5)
         constant Judge1Air(0x0E6)
         constant Judge2(0x0E7)
@@ -62,7 +62,7 @@ scope GameAndWatch2D {
         constant Judge4Air(0x0EC)
         constant Judge5(0x0ED)
         constant Judge5Air(0x0EE)
-		constant Judge6(0x0EF)
+	constant Judge6(0x0EF)
         constant Judge6Air(0x0F0)
         constant Judge7(0x0F1)
         constant Judge7Air(0x0F2)
@@ -80,25 +80,25 @@ scope GameAndWatch2D {
         string_0x0E1:; String.insert("Fire")
         string_0x0E2:; String.insert("FireAir")
         string_0x0E3:; String.insert("JudgeBegin")
-		string_0x0E4:; String.insert("JudgeBegin")
+	string_0x0E4:; String.insert("JudgeBegin")
         string_0x0E5:; String.insert("Judge1")
-		string_0x0E6:; String.insert("Judge1Air")
+	string_0x0E6:; String.insert("Judge1Air")
         string_0x0E7:; String.insert("Judge2")
-		string_0x0E8:; String.insert("Judge2Air")
+	string_0x0E8:; String.insert("Judge2Air")
         string_0x0E9:; String.insert("Judge3")
-		string_0x0EA:; String.insert("Judge3Air")
+	string_0x0EA:; String.insert("Judge3Air")
         string_0x0EB:; String.insert("Judge4")
-		string_0x0EC:; String.insert("Judge4Air")
+	string_0x0EC:; String.insert("Judge4Air")
         string_0x0ED:; String.insert("Judge5")
-		string_0x0EE:; String.insert("Judge5Air")
-		string_0x0EF:; String.insert("Judge6")
-		string_0x0F0:; String.insert("Judge6Air")
+	string_0x0EE:; String.insert("Judge5Air")
+	string_0x0EF:; String.insert("Judge6")
+	string_0x0F0:; String.insert("Judge6Air")
         string_0x0F1:; String.insert("Judge7")
-		string_0x0F2:; String.insert("Judge7Air")
+	string_0x0F2:; String.insert("Judge7Air")
         string_0x0F3:; String.insert("Judge8")
-		string_0x0F4:; String.insert("Judge8Air")
+	string_0x0F4:; String.insert("Judge8Air")
         string_0x0F5:; String.insert("Judge9")
-		string_0x0F6:; String.insert("Judge9Air")
+	string_0x0F6:; String.insert("Judge9Air")
 
         action_string_table:
         dw Action.COMMON.string_jab3
@@ -110,24 +110,24 @@ scope GameAndWatch2D {
         dw string_0x0E2 //Action.MARIO.string_0x0E2
         dw string_0x0E3 //Action.MARIO.string_0x0E3
         dw string_0x0E4 //Action.MARIO.string_0x0E4
-		dw string_0x0E5
-		dw string_0x0E6
-		dw string_0x0E7
-		dw string_0x0E8
-		dw string_0x0E9
-		dw string_0x0EA
-		dw string_0x0EB
-		dw string_0x0EC
-		dw string_0x0ED
-		dw string_0x0EE
-		dw string_0x0EF
-		dw string_0x0F0
-		dw string_0x0F1
-		dw string_0x0F2
-		dw string_0x0F3
-		dw string_0x0F4
-		dw string_0x0F5
-		dw string_0x0F6
+	dw string_0x0E5
+	dw string_0x0E6
+	dw string_0x0E7
+	dw string_0x0E8
+	dw string_0x0E9
+	dw string_0x0EA
+	dw string_0x0EB
+	dw string_0x0EC
+	dw string_0x0ED
+	dw string_0x0EE
+	dw string_0x0EF
+	dw string_0x0F0
+	dw string_0x0F1
+	dw string_0x0F2
+	dw string_0x0F3
+	dw string_0x0F4
+	dw string_0x0F5
+	dw string_0x0F6
     }
 
     OS.align(16)
@@ -272,8 +272,8 @@ scope GameAndWatch2D {
     Character.edit_action_parameters(MRGAW, Action.HammerJumpSquat,        File.MRGAW_ANIM_HAMMERMOVE,            -1,                         -1)
     Character.edit_action_parameters(MRGAW, Action.HammerAir,              File.MRGAW_ANIM_HAMMERMOVE,            -1,                         -1)
     Character.edit_action_parameters(MRGAW, Action.HammerLanding,          File.MRGAW_ANIM_HAMMERMOVE,            -1,                         -1)
-    Character.edit_action_parameters(MRGAW, Action.ShieldOn,               File.MRGAW_ANIM_SHIELDON,              -1,                         -1)
-    Character.edit_action_parameters(MRGAW, Action.ShieldOff,              File.MRGAW_ANIM_SHIELDOFF,             -1,                         -1)
+    Character.edit_action_parameters(MRGAW, Action.ShieldOn,               File.MRGAW_ANIM_SHIELDON,              SHIELDON,                         -1)
+    Character.edit_action_parameters(MRGAW, Action.ShieldOff,              File.MRGAW_ANIM_SHIELDOFF,             SHIELDON,                         -1)
     Character.edit_action_parameters(MRGAW, Action.RollF,                  File.MRGAW_ANIM_ROLLF,                 -1,                         -1)
     Character.edit_action_parameters(MRGAW, Action.RollB,                  File.MRGAW_ANIM_ROLLB,                 -1,                         -1)
     Character.edit_action_parameters(MRGAW, Action.ShieldBreak,            File.MRGAW_ANIM_DAMAGEFLYTOP,           SHIELDBREAK_,                -1)
@@ -337,10 +337,10 @@ scope GameAndWatch2D {
     Character.edit_action_parameters(MRGAW,   0xE3,                   File.MRGAW_ANIM_DSPGND,            DOWN_SPECIAL_1,             0x50000000)
     Character.edit_action_parameters(MRGAW,   0xE4,                   File.MRGAW_ANIM_DSPAIR,            DOWN_SPECIAL_1,             0x50000000)
 	
-    Character.edit_action_parameters(MRGAW,   0x0D6,                  File.MRGAW_ANIM_LANDN,             SLOPES,                     -1)
-    Character.edit_action_parameters(MRGAW,   0x0D7,                  File.MRGAW_ANIM_LANDF,             SLOPES,                     -1)
+    Character.edit_action_parameters(MRGAW,   0x0D6,                  File.MRGAW_ANIM_LANDN,             NAIRLAND,                     -1)
+    Character.edit_action_parameters(MRGAW,   0x0D7,                  File.MRGAW_ANIM_LANDF,             FAIRLAND,                   0x10000000)
     Character.edit_action_parameters(MRGAW,   0x0D8,                  File.MRGAW_ANIM_LANDB,             BAIRLAND,                   -1)
-    Character.edit_action_parameters(MRGAW,   0x0D9,                  File.MRGAW_ANIM_LANDU,             SLOPES,                     -1)
+    Character.edit_action_parameters(MRGAW,   0x0D9,                  File.MRGAW_ANIM_LANDU,             UAIRLAND,                   0x10000000)
     Character.edit_action_parameters(MRGAW,   0x0DA,                  File.MRGAW_ANIM_LANDD,             DAIRLAND,                   0x10000000)
 	
     // Modify Actions             // Action          			// Staling ID   // Main ASM           			// Interrupt/Other ASM          	// Movement/Physics ASM         // Collision ASM
@@ -349,7 +349,7 @@ scope GameAndWatch2D {
     Character.edit_action(MRGAW,  Action.Fire,       			-1,             GameAndWatchUSP.main_air_,  		GameAndWatchUSP.change_direction_,      GameAndWatchUSP.physics_,       GameAndWatchUSP.collision_)
     Character.edit_action(MRGAW,  Action.FireAir,    			-1,             GameAndWatchUSP.main_air_,  		GameAndWatchUSP.change_direction_,      GameAndWatchUSP.physics_,       GameAndWatchUSP.collision_)
     Character.edit_action(MRGAW,  Action.JudgeBegin, 			-1,          	GameAndWatchDSP.main,       		-1,					0x800D8BB4,			GameAndWatchDSP.ground_collision_)
-    Character.edit_action(MRGAW,  Action.JudgeBeginAir,   	        -1,             GameAndWatchDSP.main,          		-1,					0x800D90E0,			GameAndWatchDSP.air_collision_)
+    Character.edit_action(MRGAW,  Action.JudgeBeginAir,   	        -1,             GameAndWatchDSP.main,          		-1,					0x800D90E0,			GameAndWatchDSP.air_collision_) 
 	
     // Add Action Parameters             // Action Name      // Base Action  // Animation               // Moveset Data        // Flags
     Character.add_new_action_params(MRGAW, DSP_Ground_1,   	 -1,             File.MRGAW_ANIM_DSPGND,   			DOWN_SPECIAL_1,                 0x50000000)
@@ -392,7 +392,6 @@ scope GameAndWatch2D {
     Character.add_new_action(MRGAW, DSP_Air_9,      -1,     ActionParams.DSP_Air_9,     0x1E,    GameAndWatchDSP.attacks_main_,    -1,    GameAndWatchDSP.air_physics_,    GameAndWatchDSP.air_collision_)
 																																			
     //GameAndWatchDSP.air_physics_ for all aerial versions (used to be 0x800D90E0)
-	
     // Modify Action Parameters               // Action             // Animation                // Moveset Data             // Flags
 	Character.edit_action_parameters(MRGAW,   0xE3,                 File.MRGAW_ANIM_DSPGND,              DOWN_SPECIAL_1,                    	-1)
 	Character.edit_action_parameters(MRGAW,   0xE4,                 File.MRGAW_ANIM_DSPAIRBEGIN,              DOWN_SPECIAL_1,                    	0x10000000)

@@ -1,6 +1,6 @@
 // @ Description
 // These constants must be defined for an item.
-constant SPAWN_ITEM(flashbang_stage_setting_)
+constant SPAWN_ITEM(stage_setting_)
 constant SHOW_GFX_WHEN_SPAWNED(OS.FALSE)
 constant PICKUP_ITEM_MAIN(0)
 constant PICKUP_ITEM_INIT(0)
@@ -12,12 +12,10 @@ constant PLAYER_COLLISION(0)
 // Offset to item in file.
 constant FILE_OFFSET(0x40)
 
-constant FLASHBANG_FGM(0x33)                // 0x33 = fan smack
 constant DAMAGE_TYPE(Damage.id.FIRE)
 constant INITIAL_DAMAGE(1)
 
 constant EXPLODE_TIME(500)
-constant DAMAGE_FUSE_TIME(1)
 
 constant INITIAL_SPEED(0x41F0) // 30.0
 constant ACCELERATION(0x4080) // 4.0
@@ -28,7 +26,7 @@ constant DECELERATION_SPEED(0x3F40) // 0.75
 constant GRAVITY(0x3FC0) // 1.5
 constant MAX_FALL_SPEED(0x4270) // 60.0
 
-scope flashbang_attributes {
+scope attributes {
     constant DURATION(0x0000)
     constant GRAVITY(0x0004)
     constant MAX_FALL_SPEED(0x0008)
@@ -55,16 +53,16 @@ dw Character.SNAKE_file_6_ptr           // 0x04 - address of file pointer
 dw Snake.FILE_OFFSETS.MERGED_FILERESOURCE_6_1 // 0x08 - offset to item footer
 dw 0x1B000000                           // 0x0C - ? either 0x1B000000 or 0x1C000000 - possible argument
 dw 0                                    // 0x10 - ?
-flashbang_item_states:
+item_states:
 // state 0 - main/control
-dw flashbang_main_                        // 0x14 - state 0 main
-dw flashbang_collision_                   // 0x18 - state 0 collision
-dw flashbang_hurtbox_collision_          // 0x1C - state 0 hitbox collision w/ hurtbox
-dw flashbang_hurtbox_collision_           // 0x20 - state 0 hitbox collision w/ shield
-dw flashbang_hurtbox_collision_           // 0x24 - state 0 hitbox collision w/ shield edge
+dw main_                        // 0x14 - state 0 main
+dw collision_                   // 0x18 - state 0 collision
+dw hurtbox_collision_          // 0x1C - state 0 hitbox collision w/ hurtbox
+dw hurtbox_collision_           // 0x20 - state 0 hitbox collision w/ shield
+dw hurtbox_collision_           // 0x24 - state 0 hitbox collision w/ shield edge
 dw 0                                      // 0x28 - state 0 unknown (maybe absorb)
-dw flashbang_reflect_                   // 0x2C - state 0 hitbox collision w/ reflector
-dw flashbang_hitbox_collision_            // 0x30 - state 0 hurtbox collision w/ hitbox
+dw reflect_                   // 0x2C - state 0 hitbox collision w/ reflector
+dw hitbox_collision_            // 0x30 - state 0 hurtbox collision w/ hitbox
 // state 1 - disabled
 dw 0                                    // 0x34 - state 1 main
 dw 0                                    // 0x38 - state 1 collision
@@ -75,7 +73,7 @@ dw 0                                    // 0x48 - state 1 unknown (maybe absorb)
 dw 0                                   // 0x4C - state 1 hitbox collision w/ reflector
 dw 0                                    // 0x50 - state 1 hurtbox collision w/ hitbox
 // state 2 - explosion
-dw flashbang_exploding_main_              // 0xD4 - state 2 main
+dw exploding_main_              // 0xD4 - state 2 main
 dw 0                                    // 0xD8 - state 2 collision
 dw 0                                    // 0xDC - state 2 hitbox collision w/ hurtbox
 dw 0                                    // 0xE0 - state 2 hitbox collision w/ shield
@@ -86,22 +84,12 @@ dw 0                                    // 0xF0 - state 2 hurtbox collision w/ h
 OS.align(16)
 
 // @ Description
-// based on damage colour command @ 0x8012DB70
-flash_array_:
-dw 0x24000000     // 0x00 - ?
-dw 0xDDDDDD88     // 0x04 - initial colour (white)
-dw 0x28000008     // 0x08 - determines length of colour transition (8 frames, second half word)
-dw 0xFFFFFF00     // 0x0C - target colour (white, no alpha)
-dw 0x04000004     // 0x10 - determines total length of flash (8 frames, second half word)
-dw 0x00000000     // 0x14 - end of command
-
-// @ Description
-// Subroutine which sets up initial properties of flashbang.
+// Subroutine which sets up initial properties of the Nikita missile.
 // a0 - player object
 // a1 - item info array
 // a2 - x/y/z coordinates to create item at
 // a3 - unknown x/y/z offset
-scope flashbang_stage_setting_: {
+scope stage_setting_: {
     addiu   sp, sp,-0x0060                  // allocate stack space
     sw      s0, 0x0020(sp)                  // ~
     sw      s1, 0x0024(sp)                  // ~
@@ -112,7 +100,7 @@ scope flashbang_stage_setting_: {
     sw      r0, 0x0010(sp)                  // argument 4(unknown) = 0
     beqz    v0, _end                        // end if no item was created
     or      s0, v0, r0                      // s0 = item object
-    li      s1, flashbang_attributes.struct   // s1 = flashbang_attributes.struct
+    li      s1, attributes.struct   // s1 = attributes.struct
 
     // item is created
     sw      v0, 0x0040(sp)                  // 0x0040(sp) = item object
@@ -144,7 +132,7 @@ scope flashbang_stage_setting_: {
     lbu     t9, 0x0158(v1)                  // ~
     ori     t9, t9, 0x0010                  // ~
     sb      t9, 0x0158(v1)                  // enable unknown bitflag
-    lw      t6, flashbang_attributes.DURATION(s1)  // t6 = duration
+    lw      t6, attributes.DURATION(s1)  // t6 = duration
     sw      t6, 0x02C0(v1)                  // store duration\
     lli     t7, 0x0004                      // ~
     sw      t7, 0x0354(v1)                  // unknown value(bit field?) = 0x00000004
@@ -160,7 +148,7 @@ scope flashbang_stage_setting_: {
     sw      v1, 0x0AE0(t6)                  // save object address to free space in player struct
     sw      t6, 0x01C4(v1)                  // save player struct to custom variable space in the item special struct
 
-    li      s1, flashbang_attributes.struct   // s1 = flashbang_attributes.struct
+    li      s1, attributes.struct   // s1 = attributes.struct
 
     sw      r0, VARIABLES.ANGLE(v1) // initial angle = 0
     sw      r0, VARIABLES.HIT_OPPONENT(v1) // hit opponent = FALSE
@@ -182,7 +170,7 @@ scope flashbang_stage_setting_: {
     sw      at, VARIABLES.ANGLE(v1) // initial angle = 180deg
 
     _continue:
-    sw      t6, 0x0024(v1) // set direction
+    sw      t6, 0x0024(v1) // set direction to Snake's facing direction at release; never updated again after this
 
     sw      r0, VARIABLES.SPEED(v1) // initial speed = 0
 
@@ -205,13 +193,13 @@ scope flashbang_stage_setting_: {
     // ori     at, at, 0x0080                  // ~
     // sh      at, 0x02CE(v1)                  // enable bitflag which allows owner's hitboxes to collide with the hurtbox
 
-    li      t0, flashbang_attributes.struct   // t0 = flashbang_attributes.struct
-    lw      t1, flashbang_attributes.MAX_FALL_SPEED(t0)    // t1 = MAX_SPEED
+    li      t0, attributes.struct   // t0 = attributes.struct
+    lw      t1, attributes.MAX_FALL_SPEED(t0)    // t1 = MAX_SPEED
     sw      t1, 0x01C8(v1)                  // max speed = MAX_SPEED
     sw      r0, 0x01CC(v1)                  // rotation direction = 0
     sw      r0, 0x01D0(v1)                  // hitbox refresh timer = 0
     sw      r0, 0x01D4(v1)                  // hitbox collision flag = FALSE
-    li      t1, flashbang_blast_zone_         // load flashbang blast zone routine
+    li      t1, blast_zone_         // load Nikita blast zone routine
     sw      t1, 0x0398(v1)                  // save routine to part of item special struct that carries unique blast wall destruction routines
 
     sw      r0, 0x0100(v1)                  // remove possible reference to character ID use by Bomb
@@ -238,9 +226,9 @@ scope flashbang_stage_setting_: {
 }
 
 // @ Description
-// Main subroutine for the flashbang.
+// Main subroutine for the Nikita missile.
 // a0 = item object
-scope flashbang_main_: {
+scope main_: {
     addiu   sp, sp,-0x0040                  // allocate stack space
     sw      s0, 0x0014(sp)                  // ~
     sw      s1, 0x0018(sp)                  // ~
@@ -249,7 +237,7 @@ scope flashbang_main_: {
 
     lw      s0, 0x0084(a0)                  // s0 = item special struct
     or      s1, a0, r0                      // s1 = item object
-    li      s2, flashbang_attributes.struct // s2 = flashbang_attributes.struct
+    li      s2, attributes.struct // s2 = attributes.struct
 
     _check_damage:
     lw at, 0x1c(s0) // load item->percent_damage (total damage received)
@@ -257,7 +245,7 @@ scope flashbang_main_: {
     bnez at, _check_duration  // branch if damage < 25 (continue normal operation)
     nop
     // if we're here, we took enough damage to explode
-    jal flashbang_explosion_ // begin explosion
+    jal explosion_ // begin explosion
     or a0, s1, r0 // a0 = item object
     b _end // branch to end
     nop
@@ -266,7 +254,7 @@ scope flashbang_main_: {
     lw      v0, 0x02C0(s0)                  // v0 = remaining duration
     bnezl   v0, _update_duration            // branch if duration has not ended
     nop
-    jal     flashbang_explosion_            // begin explosion
+    jal     explosion_            // begin explosion
     or      a0, s1, r0                      // a0 = item special struct
     b       _end                            // end
     nop
@@ -368,9 +356,9 @@ scope flashbang_main_: {
 
         _get_turn_angle:
         mtc1    r0, f0                      // f0 = 0
-        li      at, 0x40C90FE4              // ~
+        li      at, 0x40C90FDB              // ~
         mtc1    at, f2                      // f2 = 6.28319 rads/360 degrees
-        li      at, 0xC0490FD0              // ~
+        li      at, 0xC0490FDB              // ~
         mtc1    at, f4                      // f4 = -3.14159 rads/-180 degrees
         li      at, ROTATE_SPEED            // ~
         mtc1    at, f6                      // f6 = ROTATE_SPEED
@@ -378,15 +366,34 @@ scope flashbang_main_: {
         sub.s   f8, f12, f10                // f8 = angle difference: stick angle - current angle
         c.lt.s  f4, f8                      // ~
         nop                                 // ~
-        bc1fl   _calculate_turn             // branch if angle difference < -180...
-        add.s   f8, f8, f2                  // ...and add 360 degrees to angle differnece
+        bc1t    _skip_add                   // branch if angle difference >= -180...
+        nop
+        add.s   f8, f8, f2                  // ...otherwise add 360 degrees to angle difference
+        _skip_add:
 
         // if angle difference > 180 deg, we should subtract 360 deg
         neg.s   f14, f4 // f14 = 3.14159
-        c.lt.s  f8, f14                     // ~
+        c.le.s  f8, f14                     // ~
         nop                                 // ~
-        bc1fl   _calculate_turn             // branch if angle difference > 180...
-        sub.s   f8, f8, f2                  // ...and subtract 360 degrees from angle difference
+        bc1t    _skip_sub                   // branch if angle difference <= 180...
+        nop
+        sub.s   f8, f8, f2                  // ...otherwise subtract 360 degrees from angle difference
+        _skip_sub:
+
+        // an exact 180deg reversal is ambiguous; always favor turning through
+        // whichever half is upward, based on current facing direction
+        sub.s   f16, f8, f14                // f16 = angle difference - 180deg
+        abs.s   f16, f16                    // f16 = |angle difference - 180deg|
+        li      at, 0x3C800000              // ~0.9deg tolerance
+        mtc1    at, f18                     // ~
+        c.lt.s  f18, f16                    // ~
+        nop                                 // ~
+        bc1t    _calculate_turn             // branch if not close to an exact reversal...
+        nop
+        lw      t9, 0x0024(s0)              // t9 = direction at release (+1 right / -1 left), fixed at spawn
+        bgez    t9, _calculate_turn         // branch if facing right (+180 already turns upward)...
+        nop
+        sub.s   f8, f8, f2                  // ...otherwise flip to -180, which turns upward when facing left
 
         _calculate_turn:
         abs.s   f14, f8                     // f14 = absolute angle difference
@@ -540,21 +547,6 @@ scope flashbang_main_: {
         sw      r0, 0x0034(s0)                  // z velocity = 0
     }
 
-    scope _set_direction: {
-        lw      at, 0x002C(s0) // at = x velocity
-        beqz	at, _end // don't update direction if x speed = 0
-        lwc1    f4, 0x002C(s0) // f4 = x speed
-        mtc1    r0, f0 // f0 = 0
-        c.lt.s  f4, f0 // = 1 if > 0
-        nop
-        bc1fl _continue
-        addiu at, r0, 1 // direction = R
-        addiu at, r0, -1 // or direction = L
-        _continue:
-        sw at, 0x0024(s0)					// overwrite direction
-        _end:
-    }
-
     scope _do_smoke: {
         lw      t0, 0x02C0(s0) // t0 = current duration
 
@@ -572,7 +564,7 @@ scope flashbang_main_: {
         _spawn_smoke:
         // create a smoke particle every 4 frames
         lw      a0, 0x0074(s1)                  // a0 = item first joint struct
-        lwc1    f12, 0x0038(a0)                 // f12 = flashbang rotation angle
+        lwc1    f12, 0x0038(a0)                 // f12 = nikita rotation angle
         neg.s   f12, f12                        // f12 = theta
         jal     0x80035CD0                      // f0 = cos(theta)
         swc1    f12, 0x0004(sp)                 // save 0x0050(sp) = theta
@@ -599,18 +591,18 @@ scope flashbang_main_: {
         add.s   f16, f8, f10                    // f16 = x'
         sub.s   f18, f14, f12                   // f18 = y'
 
-        lwc1    f0, 0x001C(a0)                  // f0 = flashbang x
-        lwc1    f2, 0x0020(a0)                  // f2 = flashbang y
-        lwc1    f4, 0x0024(a0)                  // f4 = flashbang z
+        lwc1    f0, 0x001C(a0)                  // f0 = nikita x
+        lwc1    f2, 0x0020(a0)                  // f2 = nikita y
+        lwc1    f4, 0x0024(a0)                  // f4 = nikita z
 
-        add.s   f0, f0, f16                     // f0 = flashbang pin abs x
-        add.s   f2, f2, f18                     // f2 = flashbang pin abs y
+        add.s   f0, f0, f16                     // f0 = nikita pin abs x
+        add.s   f2, f2, f18                     // f2 = nikita pin abs y
 
         swc1    f0, 0x0004(sp)                  // save abs x
         swc1    f2, 0x0008(sp)                  // save abs y
         swc1    f4, 0x000C(sp)                  // save abs z
 
-        addiu   a0, sp, 0x0004 // a0 = flashbang pin abs x/y/z
+        addiu   a0, sp, 0x0004 // a0 = nikita pin abs x/y/z
         lli     a1, 0x0 // a1 = 0
         addiu   sp, sp, -0x20
         jal     0x800FF648 // efManagerDustExpandSmallMakeEffect(Vec3f *pos, f32 f_index)
@@ -632,19 +624,19 @@ scope flashbang_main_: {
 }
 
 // @ Description
-// Collision subroutine for the flashbang.
+// Collision subroutine for the Nikita missile.
 // a0 = item object
-scope flashbang_collision_: {
+scope collision_: {
     addiu   sp, sp,-0x0058                  // allocate stack space
     sw      ra, 0x0014(sp)                  // ~
     sw      s0, 0x0040(sp)                  // ~
     sw      s1, 0x0044(sp)                  // store ra, s0, s1
     or      s0, a0, r0                      // s0 = item object
-    li      s1, flashbang_attributes.struct   // s1 = flashbang_attributes.struct
+    li      s1, attributes.struct   // s1 = attributes.struct
 
     lw      a0, 0x0084(s0)                  // ~
     addiu   a0, a0, 0x0038                  // a0 = x/y/z position
-    li      a1, flashbang_detect_collision_   // a1 = flashbang_detect_collision_
+    li      a1, detect_collision_   // a1 = detect_collision_
     or      a2, s0, r0                      // a2 = item object
     jal     0x800DA034                      // collision detection
     ori     a3, r0, 0x0C21                  // bitmask (all collision types)
@@ -652,7 +644,7 @@ scope flashbang_collision_: {
     beqz    v0, _end                        // branch if collision result = FALSE
     lw      t8, 0x0084(s0)                  // t8 = item special struct
 
-    jal     flashbang_explosion_            // begin explosion
+    jal     explosion_            // begin explosion
     or      a0, s0, r0                      // a0 = item object
 
     _end:
@@ -665,31 +657,16 @@ scope flashbang_collision_: {
 }
 
 // @ Description
-// Collision subroutine for the flashbang's resting state.
-// a0 = item object
-scope flashbang_resting_collision_: {
-    addiu   sp, sp,-0x0018                  // allocate stack space
-    sw      ra, 0x0014(sp)                  // store ra
-    li      a1, flashbang_begin_main_         // a1 = flashbang_begin_main_
-    jal     0x801735A0                      // generic resting collision?
-    nop
-    lw      ra, 0x0014(sp)                  // restore ra
-    addiu   sp, sp, 0x0018                  // deallocate stack space
-    jr      ra                              // return
-    or      v0, r0, r0                      // return 0
-}
-
-// @ Description
-// Main subroutine for the flashbang's exploding state.
+// Main subroutine for the Nikita missile's exploding state.
 // a0 = item object
 // 80186524
-scope flashbang_exploding_main_: {
+scope exploding_main_: {
     addiu   sp, sp,-0x0028                  // allocate stack space
     sw      ra, 0x0014(sp)                  // ~
     sw      s0, 0x001C(sp)                  // store ra, s0
     lw      s0, 0x0084(a0)                  // s0 = item special struct
 
-    jal     flashbang_explosion_hitboxes_     // subroutine which handles explosion hitboxes
+    jal     explosion_hitboxes_     // subroutine which handles explosion hitboxes
     sw      s0, 0x0010(sp)                  // save item special struct address
     lli     at, 0x0001                      // at = explosion ending frame
     lhu     t6, 0x033E(s0)                  // t6 = current explosion timer
@@ -714,9 +691,9 @@ scope flashbang_exploding_main_: {
 }
 
 // @ Description
-// Hitbox? subroutine for the flashbang's exploding state.
+// Hitbox? subroutine for the Nikita missile's exploding state.
 // For now, just replaces a hard-coded reference to the item info array and then jumps to the original routine, 0x801863AC
-scope flashbang_explosion_hitboxes_: {
+scope explosion_hitboxes_: {
     lw      v0, 0x0084(a0)                  // a0 = item special struct
     li      t6, item_info_array     // t6 = item_info_array
     // TODO: extend this custom routine if addressing offset hard-code(s)
@@ -725,9 +702,9 @@ scope flashbang_explosion_hitboxes_: {
 }
 
 // @ Description
-// Changes a flashbang to the aerial/main state.
+// Changes the Nikita missile to the aerial/main state.
 // a0 = item object
-scope flashbang_begin_main_: {
+scope begin_main_: {
     addiu   sp, sp,-0x0018                  // allocate stack space
     sw      ra, 0x0014(sp)                  // ~
     sw      a0, 0x0018(sp)                  // store ra, a0
@@ -740,7 +717,7 @@ scope flashbang_begin_main_: {
     nop
     // sw      r0, 0x010C(a0)                  // disable hitbox
     lw      a0, 0x0018(sp)                  // a0 = item object
-    li      a1, flashbang_item_states         // a1 = object state base address
+    li      a1, item_states         // a1 = object state base address
     jal     0x80172EC8                      // change item state
     ori     a2, r0, r0                      // a2 = 0 (aerial/main state)
     lw      ra, 0x0014(sp)                  // load ra
@@ -749,35 +726,9 @@ scope flashbang_begin_main_: {
 }
 
 // @ Description
-// Changes a flashbang to the grounded/resting state.
-// a0 = item object
-scope flashbang_begin_resting_: {
-    addiu   sp, sp,-0x0018                  // allocate stack space
-    sw      ra, 0x0014(sp)                  // ~
-    sw      a0, 0x0018(sp)                  // store ra, a0
-    lw      a0, 0x0084(a0)                  // a0 = item special struct
-    // sw      r0, 0x010C(a0)                  // disable hitbox
-    sw      r0, 0x0248(a0)                  // disable hurtbox
-    lbu     t0, 0x02CE(a0)                  // t0 = unknown bitfield
-    // ori     t0, t0, 0x0080               // enables item pickup bit
-    andi    t0, t0, 0x00CF                  // disable 2 bits
-    sb      t0, 0x02CE(a0)                  // store updated bitfield
-    sw      r0, 0x0030(a0)                  // y speed = 0
-    jal     0x80173F54                      // bomb subroutine, sets kinetic state value and applies a multiplier to x speed?
-    sw      r0, 0x0034(a0)                  // z speed = 0
-    lw      a0, 0x0018(sp)                  // a0 = item object
-    li      a1, flashbang_item_states         // a1 = object state base address
-    jal     0x80172EC8                      // change item state
-    ori     a2, r0, 0x0001                  // a2 = 1 (grounded/resting state)
-    lw      ra, 0x0014(sp)                  // load ra
-    jr      ra                              // return
-    addiu   sp, sp, 0x0018                  // deallocate stack space
-}
-
-// @ Description
-// Handles the flashbang's explosion.
+// Handles the Nikita missile's explosion.
 // Based on function 0x80186368 and its subroutine 0x80185A80.
-scope flashbang_explosion_: {
+scope explosion_: {
     addiu   sp, sp,-0x0030                  // allocate stack space
     sw      ra, 0x001C(sp)                  // ~
     sw      s0, 0x0018(sp)                  // store ra, s0
@@ -813,7 +764,7 @@ scope flashbang_explosion_: {
     sh      t1, 0x0156(t0)                  // set unknown value to 1
     jal     0x8017275C                      // bomb subroutine, sets up hitbox stuff? potentially hard-coded?
     or      a0, s0, r0                      // a0 = item object
-    jal     flashbang_begin_explosion_      // change to explosion state
+    jal     begin_explosion_      // change to explosion state
     or      a0, s0, r0                      // a0 = item object
     jal     0x800269C0                      // play FGM
     lli     a0, 0x0000                      // FGM id = 0 (small explosion)
@@ -824,10 +775,10 @@ scope flashbang_explosion_: {
 }
 
 // @ Description
-// Changes a flashbang to the explosion state.
+// Changes the Nikita missile to the explosion state.
 // Based on function 0x8018656C and its subroutine 0x801864E8
 // a0 = item object
-scope flashbang_begin_explosion_: {
+scope begin_explosion_: {
     addiu   sp, sp,-0x0018                  // allocate stack space
     sw      ra, 0x0014(sp)                  // store ra
     lw      v0, 0x0084(a0)                  // v0 = item special struct
@@ -841,10 +792,10 @@ scope flashbang_begin_explosion_: {
     sw      t2, 0x0140(v0)                  // set hitbox kbg to 70
     lli     t2, 000050                      // ~
     sw      t2, 0x0148(v0)                  // set hitbox bkb to 50
-    jal     flashbang_explosion_hitboxes_     // subroutine which handles explosion hitboxes
+    jal     explosion_hitboxes_     // subroutine which handles explosion hitboxes
     sw      a0, 0x0018(sp)                  // store a0
     lw      a0, 0x0018(sp)                  // a0 = item object
-    li      a1, flashbang_item_states         // a1 = object state base address
+    li      a1, item_states         // a1 = object state base address
     jal     0x80172EC8                      // change item state
     ori     a2, r0, 0x0002                  // a2 = 2 (explosion state)
     lw      a0, 0x0018(sp)                  // a0 = item object
@@ -860,7 +811,7 @@ scope flashbang_begin_explosion_: {
         nop
 
         _enabled:
-        lui     t2, 0x43E1 // 450
+        lui     t2, 0x43A2 // 324
         sw      t2, 0x0138(v0)  // size
         addiu   at, r0, 14
         sw      at, 0x0110(v0)  // damage
@@ -875,7 +826,7 @@ scope flashbang_begin_explosion_: {
         nop
 
         _disabled:
-        lui     t2, 0x4396 // 300
+        lui     t2, 0x4361 // 225
         sw      t2, 0x0138(v0)  // size
         addiu   at, r0, 7
         sw      at, 0x0110(v0)  // damage
@@ -896,8 +847,8 @@ scope flashbang_begin_explosion_: {
 }
 
 // @ Description
-// Collision detection subroutine for aerial flashbangs.
-scope flashbang_detect_collision_: {
+// Collision detection subroutine for the aerial Nikita missile.
+scope detect_collision_: {
     // Copy beginning of subroutine 0x801737B8
     OS.copy_segment(0xEE0F4, 0x88)
     beql    v0, r0, _end                    // modify branch
@@ -913,12 +864,12 @@ scope flashbang_detect_collision_: {
 }
 
 // @ Description
-// Runs when a flashbang's hitbox collides with a hurtbox.
+// Runs when the Nikita missile's hitbox collides with a hurtbox.
 // a0 = item object
-scope flashbang_hurtbox_collision_: {
+scope hurtbox_collision_: {
     addiu   sp, sp,-0x0030              // allocate stack space
     sw      ra, 0x0024(sp)              // ~
-    jal     flashbang_begin_main_         // transition to aerial/main state
+    jal     begin_main_         // transition to aerial/main state
     sw      a0, 0x0028(sp)              // store ra, a0
 
     lw      a0, 0x0028(sp)              // a0 = item struct
@@ -939,14 +890,14 @@ scope flashbang_hurtbox_collision_: {
 }
 
 // @ Description
-// this subroutine handles hitbox collision for the flashbang, causing it to be launched when hit by attacks
+// this subroutine handles hitbox collision for the Nikita missile, causing it to be launched when hit by attacks
 // a0 = item object
-scope flashbang_hitbox_collision_: {
+scope hitbox_collision_: {
     addiu   sp, sp,-0x0050              // allocate stack space
     lw      v0, 0x0084(a0)              // v0 = item special struct
     sw      ra, 0x0020(sp)              // 0x0020(sp) = ra
     sw      a0, 0x0024(sp)              // 0x0024(sp) = item object
-    jal     flashbang_begin_main_         // transition to aerial/main state
+    jal     begin_main_         // transition to aerial/main state
     sw      v0, 0x0028(sp)              // 0x0028(sp) = item special struct
 
     // update item ownership and combo ownership
@@ -1024,7 +975,7 @@ scope flashbang_hitbox_collision_: {
     or      v0, r0, r0 // return 0 (do not destroy)
 }
 
-scope flashbang_reflect_: {
+scope reflect_: {
     lw t0, 0x84(a0) // t0 = item special struct
 
     // reflect the projectile by adding 180 degrees to its angle
@@ -1049,8 +1000,8 @@ scope flashbang_reflect_: {
 }
 
 // @ Description
-// this routine gets run by whenever a projectile crosses the blast zone. The purpose here is to restock Peppy's flashbangs
-scope flashbang_blast_zone_: {
+// this routine gets run by whenever a projectile crosses the blast zone. The purpose here is to clear Snake's Nikita reference so he can fire another one
+scope blast_zone_: {
     lw      t0, 0x0084(a0)          // t0 = item special struct
     lw      t1, 0x01C4(t0)          // load player struct from item special struct
 

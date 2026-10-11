@@ -3,6 +3,8 @@ name: "Tree Top Town"
 
 series: DONKEY_KONG
 
+hazard_type: "HAZARDS" # Options: NONE, HAZARDS, MOVEMENT, BOTH
+
 training_background: SECTOR_Z
 
 offsets:

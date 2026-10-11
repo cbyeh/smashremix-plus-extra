@@ -1,6 +1,6 @@
 # [InternalFileTableOffsetBytes, InternalFileResourceOffsetBytes]
 offsets:
-  main: ["0164", "0000"]
+  main: ["01DC", "0000"]
   character: ["0004", "3FFFC"]
 
 definitions:
@@ -46,6 +46,11 @@ sounds:
   "FFE6": announcer
   "FFE7": roll
   "FFE8": relief
+
+sounds_special:
+  "FFE8":
+    fgm_type: SLEEP
+    length: "0x120"
 
 announcer_fgm: "FFE6"
 

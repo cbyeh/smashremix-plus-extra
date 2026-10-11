@@ -1,0 +1,28 @@
+output_gfx: templates/shuriken_projectile/shuriken_gfx.bin
+output_hitbox: templates/shuriken_projectile/shuriken_hitbox.bin
+
+frames:
+  - templates/shuriken_projectile/shuriken1.bmp
+  - templates/shuriken_projectile/shuriken2.bmp
+  - templates/shuriken_projectile/shuriken3.bmp
+
+frame_wait: 3
+
+hitbox:
+  size: 200
+  angle: 361
+  knockback_scale: 25
+  damage: 6
+  element: 1
+  knockback_weight: 0
+  shield_damage: 1
+  attack_count: 1
+  can_setoff: 1
+  sfx: 28
+  priority: 1
+  can_rehit_item: 1
+  can_hop: 1
+  can_reflect: 1
+  can_absorb: 1
+  can_shield: 1
+  knockback_base: 20

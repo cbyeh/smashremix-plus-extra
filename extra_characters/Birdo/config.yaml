@@ -5,9 +5,28 @@ offsets:
 
 definitions:
   base_character: YOSHI
-  series_logo_css: MARIO_BROS
-  series_logo_model: MARIO_BROS
   select_pose: 4
+  break_the_targets: DRM #Dr. Mario
+  board_the_platforms: GND #Ganondorf
+  variant_type: NA
+
+singleplayer:
+  stage1: "SUBCON"
+  stage2: "YOSHI_STORY_2"
+  stage3: "TALTAL"
+  # Game will crash if it can't find a unique stage
+  # (i.e. not used prior to character being rolled)
+  # from the stage list during initial 1P setup
+
+  duo: # Duo support doesn't exist yet, adding parameters nonetheless
+    anim: "0x1C8"
+    moveset: "duo_moveset_yoshi"
+    # flags: 0
+
+  team:
+    anim: "0x745"
+    moveset: "team_moveset_yoshi"
+    # flags: 0
 
 num_costumes: 9
 

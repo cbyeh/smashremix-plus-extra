@@ -8,6 +8,8 @@ definitions:
   series_logo_css: SONIC
   series_logo_model: SONIC
   select_pose: 4
+  break_the_targets: SONIC
+  board_the_platforms: SONIC
 
 shield_pose: "0x013A"
 
@@ -82,7 +84,7 @@ sounds:
   "060F": ROLL
   "0610": SHIELDBREAK
   "0611": STUNNED
-  "0612": SLEEP # same as STUNNED
+  "0612": SLEEP
   "0613": TAUNT
   "0614": TECH
   "0615": TEETER

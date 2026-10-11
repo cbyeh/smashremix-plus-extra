@@ -273,13 +273,13 @@ ${CHARACTER}
 ${CHARACTER}
 ${CHARACTER}
 ${CHARACTER}
-012A Mario Shield Pose
-012A Mario Shield Pose
-012A Mario Shield Pose
-012A Mario Shield Pose
-012A Mario Shield Pose
-012A Mario Shield Pose
-012A Mario Shield Pose
-012A Mario Shield Pose
-012A Mario Shield Pose
+${SHIELD_POSE}
+${SHIELD_POSE}
+${SHIELD_POSE}
+${SHIELD_POSE}
+${SHIELD_POSE}
+${SHIELD_POSE}
+${SHIELD_POSE}
+${SHIELD_POSE}
+${SHIELD_POSE}
 END OF REQ LIST

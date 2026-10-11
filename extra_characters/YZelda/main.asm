@@ -341,7 +341,7 @@ scope YZelda {
     Character.edit_action_parameters(YZELDA, Action.StunStartU,              File.PEACH_DOWN_STAND_U,        STUN_START,                 -1)
     Character.edit_action_parameters(YZELDA, Action.Stun,                    File.PEACH_STUN,                STUN_,                       -1)
     Character.edit_action_parameters(YZELDA, Action.Sleep,                   File.PEACH_STUN,                ASLEEP_,                     -1)
-    Character.edit_action_parameters(YZELDA, Action.Grab,                    File.YZELDA_ANIM_GRAB,          GRAB,                       -1)
+    Character.edit_action_parameters(YZELDA, Action.Grab,                    File.YZELDA_ANIM_GRAB,          GRAB_,                       -1)
     Character.edit_action_parameters(YZELDA, Action.GrabPull,                File.YZELDA_ANIM_GRAB_WAIT,     -1,                         -1)
     Character.edit_action_parameters(YZELDA, Action.ThrowF,                  File.YZELDA_ANIM_THROWF,        CUSTOM_THROW_F,             -1)
     Character.edit_action_parameters(YZELDA, Action.ThrowB,                  File.YZELDA_ANIM_THROWB,        CUSTOM_THROW_B,              0x10000000)

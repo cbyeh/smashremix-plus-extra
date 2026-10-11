@@ -15,7 +15,7 @@ constant FILE_OFFSET(0x40)
 constant DAMAGE_TYPE(Damage.id.FIRE)
 constant INITIAL_DAMAGE(0)
 constant EXPLODE_DAMAGE(17)
-constant EXPLODE_SIZE(0x43FA) // 500
+constant EXPLODE_SIZE(0x43D4) // 424
 
 constant INITIAL_FUSE_TIME(1600)
 constant DAMAGE_FUSE_TIME(1)

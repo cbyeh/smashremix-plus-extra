@@ -393,6 +393,11 @@ scope MetaKnightSpecial: {
             lw a0, 0x0084(a0) // a0 = player struct
             sw r0, 0x17C(a0) // temp variable 1 = 0
 
+            // take mid-air jumps away at this point
+            lw t0, 0x9C8(a0) // t0 = attribute pointer
+            lw t0, 0x64(t0) // t0 = max jumps
+            sb t0, 0x148(a0) // jumps used = max jumps
+
             OS.routine_end(0x20)
         }
 
@@ -686,6 +691,11 @@ scope MetaKnightSpecial: {
             lw a0, 0x0084(a0) // a0 = player struct
             sw r0, 0x0048(a0) // x velocity = 0
 
+            // take mid-air jumps away at this point
+            lw t0, 0x9C8(a0) // t0 = attribute pointer
+            lw t0, 0x64(t0) // t0 = max jumps
+            sb t0, 0x148(a0) // jumps used = max jumps
+
             // set Y speed to 1/2 current speed
             lwc1 f2, 0x4C(a0) // f2 = y speed
             lui at, 0x3ECC // at = ~0.4
@@ -738,6 +748,11 @@ scope MetaKnightSpecial: {
             // add a Y speed hop
             lui at, 0x41F0 // at = 30.0
             sw at, 0x4C(t0) // save y speed
+
+            // take mid-air jumps away at this point
+            lw t1, 0x9C8(t0) // t1 = attribute pointer
+            lw t1, 0x64(t1) // t1 = max jumps
+            sb t1, 0x148(t0) // jumps used = max jumps
 
             OS.routine_end(0x20)
         }
@@ -820,8 +835,8 @@ scope MetaKnightSpecial: {
                     add.s f2, f2, f4 // f2 = f2 + 7.0
                     swc1 f2, 0x17C(s0) // update temp variable
 
-                    li a1, 0x41F00000 // arg1 = velocity = 30
-                    li a2, 0x42200000 // arg2 = clamp = 40
+                    li a1, 0x41D00000 // arg1 = velocity = 26
+                    li a2, 0x42080000 // arg2 = clamp = 36
                     
                     jal 0x800D8D34 // ftPhysicsAddClampAirVelY(FTStruct *fp, f32 vel, f32 clamp)
                     lw a0, 0x84(a0) // arg0 = player struct
@@ -979,13 +994,13 @@ scope MetaKnightSpecial: {
                 _fast:
                 or a1, r0, r0 // arg2 = min stick X
                 li a2, 0x3E99999A // arg3 (accel) = 0.3
-                li a3, 0x42B40000 // arg4 (max speed) = 90
+                li a3, 0x42A00000 // arg4 (max speed) = 80
                 b _control_x_apply
                 nop
 
                 _slow:
                 or a1, r0, r0 // arg2 = min stick X
-                li a2, 0x3DA3D70A // arg3 (accel) = 0.08
+                li a2, 0x3D75C28F // arg3 (accel) = 0.06
                 li a3, 0x42700000 // arg4 (max speed) = 60
 
                 _control_x_apply:

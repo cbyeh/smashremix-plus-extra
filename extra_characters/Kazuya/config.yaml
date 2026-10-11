@@ -18,13 +18,13 @@ results:
   name_scale: 0.78
   name_x: 25
   wins_x: 175
-  
+
 sounds:
-  "FFF0": kaz_hurt 
-  "FFF1": kaz_ko 
-  "FFF2": kaz_toah 
-  "FFF3": kaz_uia 
-  "FFF4": kaz_ya 
+  "FFF0": kaz_hurt
+  "FFF1": kaz_ko
+  "FFF2": kaz_toah
+  "FFF3": kaz_uia
+  "FFF4": kaz_ya
   "FFF5": kaz_yag
   "FFF6": kaz_ho
   "FFF7": selected
@@ -53,12 +53,7 @@ singleplayer:
 
 # Files 6, 7, 8, 9
 # [Filename (without .bin), InternalFileTableOffsetBytes, InternalFileResourceOffsetBytes]
-files: [
-  "0x0",
-  "0x0",
-  "0x0",
-  "0x0"
-]
+files: ["0x0", "0x0", "0x0", "0x0"]
 
 cloaking_fix:
   fix_logic: Kazuya.CloakingFix.fix_

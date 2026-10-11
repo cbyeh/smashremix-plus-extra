@@ -6,6 +6,11 @@ scope KazuyaSpecial {
         lw s0, 0x84(a0) // s0 = player struct
         sw s0, 0x1c(sp) // save player struct
 
+        // Some of this character's grounded attacks don't have their own
+        // turnaround check (unlike a dash/walk direction change), so on
+        // entering one of these actions we manually search for the nearest
+        // opponent and snap the character to face them - see
+        // auto_turnaround below.
         scope _auto_turnaround_check: {
             lli t0, Kazuya.Action.JAB1
             beq a1, t0, _continue
@@ -24,12 +29,44 @@ scope KazuyaSpecial {
             lli t0, Kazuya.Action.CROUCH_TILT
             beq a1, t0, _continue
             nop
-            b _end // no actions matched
+            b _end // action isn't one of the auto-turnaround actions above
             nop
 
             _continue:
             jal KazuyaSpecial.auto_turnaround
             lw a0, 0x18(sp) // a0 = player object
+
+            _end:
+        }
+
+        // 0x0AE4 is shared by DASH and TURN's check_wavedash_input_
+        // gesture tracking - a dedicated scratch field (same one Snake
+        // uses for its own up-B flag) rather than one of the "tmp
+        // variable" slots, since those can be read/written by Dash/Turn's
+        // own kept-native physics/interrupt logic and we don't want to
+        // collide with that. Only reset it here, once, when actually
+        // entering the DASH/TURN pair from outside it, so progress
+        // carries over seamlessly if Kazuya transitions directly between
+        // the two (e.g. Turn into Dash) without ever losing track of how
+        // far into the gesture the player already got
+        scope _dash_turn_reset_check: {
+            lli t0, Kazuya.Action.DASH
+            beq a1, t0, _entering
+            nop
+            lli t0, Kazuya.Action.TURN
+            bne a1, t0, _end
+            nop
+
+            _entering:
+            lli t0, Kazuya.Action.DASH
+            beq a2, t0, _end // came from the sibling action - keep the state
+            nop
+            lli t0, Kazuya.Action.TURN
+            beq a2, t0, _end // came from the sibling action - keep the state
+            nop
+
+            lli t0, 0x1
+            sw t0, 0x0AE4(s0) // fresh entry from outside the pair - reset to state 1
 
             _end:
         }
@@ -42,68 +79,94 @@ scope KazuyaSpecial {
     dw OnActionChanged
     OS.patch_end()
 
-    constant TURNAROUND_X_RANGE_BACK(0x44C8) // current setting - float: 1600.0
-    constant MAX_X_RANGE_FORWARD(0x43C8) // current setting - float: 400.0
-    constant MAX_X_RANGE_BACK(0x4370) // current setting - float: 240.0
-    constant MAX_Y_RANGE_UP(0x447A) // current setting - float: 1000.0
-    constant MAX_Y_RANGE_DOWN(0x4348) // current setting - float: 200.0
-
     // @ Description
-    // Subroutine which checks for valid targets for Sonic's homing attack.
+    // Finds the closest opponent, and separately the closest overall
+    // target (an opponent, or - whichever is actually closer - an item
+    // with an active hurtbox), for auto_turnaround and any other feature
+    // that wants the plain closest target regardless of category (e.g. a
+    // proximity-triggered move). Items can never affect the opponent-only
+    // result: it's captured before items are even searched, so
+    // auto_turnaround (which only ever turns towards an opponent) is
+    // completely unaffected by nearby items.
     // a0 - player object
+    // returns
+    // v0 - closest overall target - opponent or item (NULL if none found)
+    // v1 - closest overall target's X_DIFF (signed distance, positive = in
+    //      front of the character's current facing direction)
+    // a1 - closest opponent (NULL if no opponent was found)
+    // a2 - closest opponent's X_DIFF
+    // a3 - number of opponents in the match (excludes self and teammates)
     scope check_for_targets_: {
+        // search cone shape, relative to the character's current facing
+        // direction. note TURNAROUND_X_RANGE_BACK is deliberately much
+        // larger than MAX_X_RANGE_BACK: once the character is already
+        // facing a target, it's allowed to fall much further behind before
+        // losing that target.
+        constant MAX_X_RANGE_FORWARD(0x43C8) // float: 400.0 - search range in front of the character
+        constant MAX_X_RANGE_BACK(0x4370) // float: 240.0 - search range behind the character, before a target is found
+        constant TURNAROUND_X_RANGE_BACK(0x44C8) // float: 1600.0 - search range behind the character, once already facing a target
+        constant MAX_Y_RANGE_UP(0x447A) // float: 1000.0 - search range above the character
+        constant MAX_Y_RANGE_DOWN(0x4348) // float: 200.0 - search range below the character
+
         addiu sp, sp,-0x0050 // allocate stack space
         sw ra, 0x001C(sp) // ~
         sw s0, 0x0020(sp) // ~
         sw s1, 0x0024(sp) // ~
-        sw s2, 0x0028(sp) // store ra, s0-s2
+        sw s2, 0x0028(sp) // ~
+        sw s3, 0x002C(sp) // ~
+        sw s4, 0x0030(sp) // ~
+        sw s5, 0x0034(sp) // store ra, s0-s5
 
-        or v0, r0, r0 // Clean up return registers
-        or v1, r0, r0 // Clean up return registers
+        or v0, r0, r0 // clear return registers - v0 = target object = NULL
+        or v1, r0, r0 // clear return registers - v1 = target X_DIFF = 0
 
-        or s0, a0, r0 // s0 = Sonic player object
+        or s0, a0, r0 // s0 = this character's own player object
         li s1, 0x800466FC // s1 = player object head
         lw s1, 0x0000(s1) // s1 = first player object
-        lw s2, 0x0084(s0) // s2 = player struct
+        lw s2, 0x0084(s0) // s2 = this character's player struct
+        or s3, r0, r0 // s3 = opponent count, tallied by the loop below
 
+        // pass 1: look for the closest valid opponent among all players
         _player_loop:
         beqz s1, _player_loop_exit // exit loop when s1 no longer holds an object pointer
         nop
-        beql s1, s0, _player_loop // loop if player and target object match...
+        beql s1, s0, _player_loop // skip this character's own player object...
         lw s1, 0x0004(s1) // ...and load next object into s1
 
         _team_check:
         li t0, Global.match_info // ~
         lw t0, 0x0000(t0) // t0 = match info struct
         lbu t1, 0x0002(t0) // t1 = team battle flag
-        beqz t1, _action_check // branch if team battle flag = FALSE
+        beqz t1, _action_check // branch if this isn't a team battle
         lbu t1, 0x0009(t0) // t1 = team attack flag
-        bnez t1, _action_check // branch if team attack flag != FALSE
+        bnez t1, _action_check // branch if friendly fire is enabled
         nop
 
-        // if the match is a team battle with team attack disabled
+        // if the match is a team battle with team attack disabled,
+        // teammates aren't opponents - not counted, not a turnaround target
         lw t0, 0x0084(s1) // t0 = target player struct
         lbu t0, 0x000C(t0) // t0 = target team
-        lbu t1, 0x000C(s2) // t1 = player team
+        lbu t1, 0x000C(s2) // t1 = this character's team
         beq t0, t1, _player_loop_end // skip if player and target are on the same team
         nop
 
         _action_check:
+        addiu s3, s3, 0x0001 // opponent count++ (s1 is neither self nor a teammate at this point)
         lw t0, 0x0084(s1) // t0 = target player struct
         lw t0, 0x0024(t0) // t0 = target player action
         sltiu at, t0, 0x0007 // at = 1 if action id < 7, else at = 0
-        bnez at, _player_loop_end // skip if target action id < 7 (target is in a KO action)
+        bnez at, _player_loop_end // skip if target is in a dead/respawning action (id < 7)
         nop
 
         _target_check:
-        or a0, s2, r0 // a0 = player struct
+        or a0, s2, r0 // a0 = this character's player struct
         lw a1, 0x0074(s1) // a1 = target top joint struct
-        jal check_target_ // check_target_
+        jal check_target_ // check if target is in range and closer than the current best
         or a2, s1, r0 // a2 = target object struct
-        beqz v0, _player_loop_end // branch if no new target
+        beqz v0, _player_loop_end // branch if this target isn't a new best match
         nop
 
-        // if check_target_ returned a new valid target
+        // remember the new best opponent match so far
         sw v0, 0x0B18(s2) // store target object
         sw v1, 0x0B1C(s2) // store target X_DIFF
 
@@ -111,11 +174,16 @@ scope KazuyaSpecial {
         b _player_loop // loop
         lw s1, 0x0004(s1) // s1 = next object
 
+        // pass 1 is done - capture the best opponent match now, before
+        // pass 2 (items) gets a chance to overwrite it. auto_turnaround
+        // uses this opponent-only result, so items can never affect it
         _player_loop_exit:
-        lw t0, 0x0B18(s2) // t0 = target object
-        bnez t0, _end // end if there is a targeted object
-        nop
+        lw s4, 0x0B18(s2) // s4 = closest opponent (NULL if none found)
+        lw s5, 0x0B1C(s2) // s5 = closest opponent's X_DIFF
 
+        // pass 2: also check items, continuing the comparison from
+        // wherever pass 1 left off, so the true overall closest target
+        // (opponent or item) is still available for other features
         li s1, 0x80046700 // s1 = item object head
         lw s1, 0x0000(s1) // s1 = first item object
 
@@ -128,14 +196,14 @@ scope KazuyaSpecial {
         andi t0, t0, 0x0001 // t0 = 1 if hurtbox is enabled, else t0 = 0
         beqz t0, _item_loop_end // skip if item doesn't have an active hurtbox
         nop
-        or a0, s2, r0 // a0 = player struct
+        or a0, s2, r0 // a0 = this character's player struct
         lw a1, 0x0074(s1) // a1 = target top joint struct
-        jal check_target_ // check_target_
+        jal check_target_ // check if item is in range and closer than the current best
         or a2, s1, r0 // a2 = target object struct
-        beqz v0, _item_loop_end // branch if no new target
+        beqz v0, _item_loop_end // branch if this item isn't a new best match
         nop
 
-        // if check_target_ returned a new valid target
+        // remember the new overall best match so far
         sw v0, 0x0B18(s2) // store target object
         sw v1, 0x0B1C(s2) // store target X_DIFF
 
@@ -144,90 +212,122 @@ scope KazuyaSpecial {
         lw s1, 0x0004(s1) // s1 = next object
 
         _end:
+        // reload the overall best match rather than trusting v0/v1 to
+        // still hold it - the last check_target_ call made above may have
+        // rejected its candidate (returning NULL), which would otherwise
+        // clobber an earlier, still-valid winner
+        lw v0, 0x0B18(s2) // v0 = overall best target (opponent or item)
+        lw v1, 0x0B1C(s2) // v1 = overall best target's X_DIFF
+        or a1, s4, r0 // a1 = closest opponent
+        or a2, s5, r0 // a2 = closest opponent's X_DIFF
+        or a3, s3, r0 // a3 = opponent count
         lw ra, 0x001C(sp) // ~
         lw s0, 0x0020(sp) // ~
         lw s1, 0x0024(sp) // ~
-        lw s2, 0x0028(sp) // load ra, s0-s2
+        lw s2, 0x0028(sp) // ~
+        lw s3, 0x002C(sp) // ~
+        lw s4, 0x0030(sp) // ~
+        lw s5, 0x0034(sp) // load ra, s0-s5
         addiu sp, sp, 0x0050 // deallocate stack space
         jr ra // return
         nop
+
+        // @ Description
+        // Helper for check_for_targets_ above. Checks whether a single
+        // candidate (a player or an item) is within this character's
+        // search cone and, if so, whether it's closer than the current
+        // best match.
+        // Private to check_for_targets_ - not called from anywhere else.
+        // a0 - this character's player struct
+        // a1 - candidate's top joint struct
+        // a2 - candidate object struct
+        // returns
+        // v0 - candidate object if it's the new best match, else NULL
+        // v1 - candidate's X_DIFF (only valid when v0 is non-NULL)
+        scope check_target_: {
+            lw t8, 0x0078(a0) // t8 = this character's x/y/z coordinates
+            addiu t9, a1, 0x001C // t9 = candidate x/y/z coordinates
+
+            // check if the candidate is within x range
+            mtc1 r0, f0 // f0 = 0
+            lwc1 f2, 0x0000(t8) // f2 = this character's x coordinate
+            lwc1 f4, 0x0000(t9) // f4 = candidate x coordinate
+            sub.s f10, f4, f2 // f10 = X_DIFF (candidate x - this character's x)
+            lwc1 f8, 0x0044(a0) // ~
+            cvt.s.w f8, f8 // f8 = DIRECTION
+            mul.s f10, f10, f8 // f10 = X_DIFF * DIRECTION (positive = in front)
+            lui at, MAX_X_RANGE_FORWARD // at = MAX_X_RANGE_FORWARD
+            mtc1 at, f8 // f8 = MAX_X_RANGE_FORWARD
+            c.le.s f10, f8 // ~
+            nop // ~
+            bc1fl _end // end if candidate is beyond MAX_X_RANGE_FORWARD
+            or v0, r0, r0 // and return NULL
+            lui at, TURNAROUND_X_RANGE_BACK // at = TURNAROUND_X_RANGE_BACK
+            mtc1 at, f8 // f8 = TURNAROUND_X_RANGE_BACK
+            neg.s f8, f8 // f8 = -TURNAROUND_X_RANGE_BACK
+            c.le.s f8, f10 // ~
+            nop // ~
+            bc1fl _end // end if candidate is behind TURNAROUND_X_RANGE_BACK
+            or v0, r0, r0 // and return NULL
+
+            // check if there is already a closer best match
+            lw t0, 0x0B18(a0) // t0 = current best match
+            beq t0, r0, _check_y // branch if there is no current best match yet
+            lwc1 f8, 0x0B1C(a0) // f8 = current best match's X_DIFF
+
+            // compare by absolute distance, not signed X_DIFF - otherwise a
+            // target behind us (however far) would always beat a target in
+            // front of us (however close), since the search cone extends
+            // much further behind than in front
+            abs.s f14, f10 // f14 = abs(candidate X_DIFF)
+            abs.s f8, f8 // f8 = abs(current best match's X_DIFF)
+            c.le.s f14, f8 // ~
+            nop // ~
+            bc1fl _end // end if the current best match is closer or equal
+            or v0, r0, r0 // return NULL
+
+            _check_y:
+            // calculate Y_RANGE based on X_DIFF, creating a cone shaped range
+            lwc1 f2, 0x0004(t8) // f2 = this character's y coordinate
+            lwc1 f4, 0x0004(t9) // f4 = candidate y coordinate
+            sub.s f12, f4, f2 // f12 = Y_DIFF (candidate y - this character's y)
+
+            lui at, MAX_Y_RANGE_UP // at = MAX_Y_RANGE_UP
+            mtc1 at, f8 // f8 = MAX_Y_RANGE_UP
+            c.le.s f12, f8 // ~
+            nop // ~
+            bc1fl _end // end if candidate is above MAX_Y_RANGE_UP
+            or v0, r0, r0 // and return NULL
+
+            lui at, MAX_Y_RANGE_DOWN // at = MAX_Y_RANGE_DOWN
+            mtc1 at, f8 // f8 = MAX_Y_RANGE_DOWN
+            neg.s f8, f8 // f8 = -MAX_Y_RANGE_DOWN
+            c.le.s f8, f12 // ~
+            nop // ~
+            bc1fl _end // end if candidate is below MAX_Y_RANGE_DOWN
+            or v0, r0, r0 // return NULL
+
+            // candidate is in range and closer than the current best match
+            or v0, a2, r0 // v0 = candidate object
+            mfc1 v1, f10 // v1 = X_DIFF
+
+            _end:
+            jr ra // return
+            nop
+        }
     }
 
     // @ Description
-    // Subroutine which checks if a potential target is in range for Sonic's homing attack.
-    // a0 - player struct
-    // a1 - target top joint struct
-    // a2 - target object struct
-    // returns
-    // v0 - target object (NULL when no valid target)
-    // v1 - target X_DIFF
-    scope check_target_: {
-        lw t8, 0x0078(a0) // t8 = player x/y/z coordinates
-        addiu t9, a1, 0x001C // t9 = target x/y/z coordinates
-
-        // check if the target is within x range
-        mtc1 r0, f0 // f0 = 0
-        lwc1 f2, 0x0000(t8) // f2 = player x coordinate
-        lwc1 f4, 0x0000(t9) // f4 = target x coordinate
-        sub.s f10, f4, f2 // f10 = X_DIFF (target x - player x)
-        lwc1 f8, 0x0044(a0) // ~
-        cvt.s.w f8, f8 // f8 = DIRECTION
-        mul.s f10, f10, f8 // f10 = X_DIFF * DIRECTION
-        lui at, MAX_X_RANGE_FORWARD // at = MAX_X_RANGE_FORWARD
-        mtc1 at, f8 // f8 = MAX_X_RANGE_FORWARD
-        c.le.s f10, f8 // ~
-        nop // ~
-        bc1fl _end // end if MAX_X_RANGE =< X_DIFF
-        or v0, r0, r0 // and return 0
-        lui at, TURNAROUND_X_RANGE_BACK // at = MAX_X_RANGE_BACK
-        mtc1 at, f8 // f8 = MAX_X_RANGE_BACK
-        neg.s f8, f8 // f8 = -MAX_X_RANGE_BACK
-        c.le.s f8, f10 // ~
-        nop // ~
-        bc1fl _end // end if X_DIFF =< MAX_X_RANGE_BACK
-        or v0, r0, r0 // and return 0
-
-        // check if there is a previous target
-        lw t0, 0x0B18(a0) // t0 = current target
-        beq t0, r0, _check_y // branch if there is no current target
-        lwc1 f8, 0x0B1C(a0) // f8 = current target X_DIFF
-
-        // compare X_DIFF to see if the previous target was within closer x proximity
-        c.le.s f10, f8 // ~
-        nop // ~
-        bc1fl _end // end if prev X_DIFF =< current X_DIFF
-        or v0, r0, r0 // return 0
-
-        _check_y:
-        // calculate Y_RANGE based on X_DIFF, creating a cone shaped range
-        lwc1 f2, 0x0004(t8) // f2 = player y coordinate
-        lwc1 f4, 0x0004(t9) // f4 = target y coordinate
-        sub.s f12, f4, f2 // f12 = Y_DIFF (target y - player y)
-
-        lui at, MAX_Y_RANGE_UP // at = MAX_Y_RANGE_UP
-        mtc1 at, f8 // f8 = MAX_Y_RANGE_UP
-        c.le.s f12, f8 // ~
-        nop // ~
-        bc1fl _end // end if Y_RANGE =< Y_DIFF
-        or v0, r0, r0 // and return 0
-
-        lui at, MAX_Y_RANGE_DOWN // at = MAX_Y_RANGE_DOWN
-        mtc1 at, f8 // f8 = MAX_Y_RANGE_DOWN
-        neg.s f8, f8 // f8 = -MAX_Y_RANGE_DOWN
-        c.le.s f8, f12 // ~
-        nop // ~
-        bc1fl _end // end if Y_RANGE >= Y_DIFF
-        or v0, r0, r0 // return 0
-
-        // if we're here then the target is the closest within range
-        or v0, a2, r0 // v0 = target object
-        mfc1 v1, f10 // v1 = X_DIFF
-
-        _end:
-        jr ra // return
-        nop
-    }
-
+    // Turns the character to face the nearest opponent found by
+    // check_for_targets_, if any (see _auto_turnaround_check above for when
+    // this runs). Items never factor into this at all - check_for_targets_
+    // hands back the closest opponent separately from its overall
+    // (opponent-or-item) result, and this function only ever looks at the
+    // opponent-only one. Only actually turns around when there's exactly
+    // one opponent in the match.
+    // 0x0B18/0x0B1C on the player struct are borrowed as scratch space for
+    // the search - their real contents are saved and restored around the
+    // call so nothing else on the struct is disturbed.
     // a0 = player object
     scope auto_turnaround: {
         OS.routine_begin(0x20)
@@ -241,13 +341,16 @@ scope KazuyaSpecial {
         lw t0, 0x0084(a0) // t0 = player struct
 
         lw t6, 0x0B18(t0) //
-        lw t7, 0x0B1C(t0) // save player struct variables
+        lw t7, 0x0B1C(t0) // save the struct's real 0x0B18/0x0B1C contents
 
         sw r0, 0x0B18(t0) // target = NULL
         sw r0, 0x0B1C(t0) // X_DIFF = 0
 
-        jal check_for_targets_ // check_for_targets_
+        jal check_for_targets_ // search for the nearest valid target
         nop
+
+        or t9, a1, r0 // t9 = closest opponent (copy out before a1 gets restored below)
+        or t8, a2, r0 // t8 = closest opponent's X_DIFF (copy out before a2 gets restored below)
 
         lw a0, 0x0004(sp) // ~
         lw a1, 0x0008(sp) // ~
@@ -256,13 +359,20 @@ scope KazuyaSpecial {
         lw t0, 0x0084(a0) // t0 = player struct
 
         sw t6, 0x0B18(t0) //
-        sw t7, 0x0B1C(t0) // restore player struct variables
+        sw t7, 0x0B1C(t0) // restore the struct's real 0x0B18/0x0B1C contents
 
-        beq v0, r0, _end // branch if no target was found
+        beq t9, r0, _end // branch if no opponent was found
         nop
 
-        // apply turnaround
-        mtc1 v1, f0 // f0 = xdiff
+        // only actually turn around when there's exactly one opponent in
+        // the match - the target above is still found/reported (for other
+        // features) even when this doesn't apply
+        lli t7, 0x0001
+        bne a3, t7, _end
+        nop
+
+        // target found and behind the character - turn to face it
+        mtc1 t8, f0 // f0 = opponent's xdiff
         mtc1 r0, f2 // f2 = 0
         c.le.s f2, f0
         bc1t _end
@@ -499,6 +609,139 @@ scope KazuyaSpecial {
         }
     }
 
+    // Tekken/FGC-style names for the 8 directions + neutral, relative to
+    // facing (f = towards opponent, b = away), used by classify_zone_
+    // below. Shared by DASH (going into a wavedash) and WAVEDASH
+    // (cancelling out of one).
+    scope Input {
+        constant n(0)  // neutral
+        constant f(1)  // forward
+        constant b(2)  // back
+        constant d(3)  // down
+        constant u(4)  // up
+        constant df(5) // down-forward
+        constant db(6) // down-back
+        constant uf(7) // up-forward
+        constant ub(8) // up-back
+    }
+
+    // magnitude a stick axis must reach (facing-relative for X) to count
+    // as tilted towards a direction, for classify_zone_ below - adjust
+    // here to retune every wavedash-related direction check at once
+    constant TILT_RANGE(20)
+
+    // @ Description
+    // Classifies a raw stick reading into one of Input's 9 directions.
+    // Used by DASH.main (detecting the wavedash trigger input) and
+    // WAVEDASH.main.cancel_check's _zone_transition_check (comparing this
+    // frame's stick reading against last frame's).
+    // a0 - raw stick_x
+    // a1 - raw stick_y
+    // a2 - facing direction (lr)
+    // returns
+    // v0 - Input.n/f/b/d/u/df/db/uf/ub
+    scope classify_zone_: {
+        // horizontal component (facing-relative): t1 = -1 back,
+        // 0 level, 1 forward
+        mult a0, a2
+        mflo t0 // t0 = stick_x * facing direction (positive = forward, negative = backward)
+        or t1, r0, r0 // t1 = 0 (level)
+        slti t2, t0, -(TILT_RANGE-1) // t2 = 1 if tilted back
+        beqz t2, _check_forward
+        nop
+        addiu t1, r0, -1 // t1 = -1 (back)
+        b _horizontal_done
+        nop
+        _check_forward:
+        slti t2, t0, TILT_RANGE // t2 = 1 if NOT tilted forward
+        bnez t2, _horizontal_done
+        nop
+        lli t1, 1 // t1 = 1 (forward)
+        _horizontal_done:
+
+        // vertical component: t2 = -1 down, 0 level, 1 up
+        or t2, r0, r0 // t2 = 0 (level)
+        slti t3, a1, -(TILT_RANGE-1) // t3 = 1 if tilted down
+        beqz t3, _check_up
+        nop
+        addiu t2, r0, -1 // t2 = -1 (down)
+        b _vertical_done
+        nop
+        _check_up:
+        slti t3, a1, TILT_RANGE // t3 = 1 if NOT tilted up
+        bnez t3, _vertical_done
+        nop
+        lli t2, 1 // t2 = 1 (up)
+        _vertical_done:
+
+        // combine (horizontal, vertical) into an Input direction
+        bgtz t2, _up // vertical = up
+        nop
+        bltz t2, _down // vertical = down
+        nop
+
+        // vertical = level
+        beqz t1, _n
+        nop
+        bgtz t1, _f
+        nop
+        b _b
+        nop
+
+        _up:
+        beqz t1, _u
+        nop
+        bgtz t1, _uf
+        nop
+        b _ub
+        nop
+
+        _down:
+        beqz t1, _d
+        nop
+        bgtz t1, _df
+        nop
+        b _db
+        nop
+
+        _n:
+        lli v0, Input.n
+        jr ra
+        nop
+        _f:
+        lli v0, Input.f
+        jr ra
+        nop
+        _b:
+        lli v0, Input.b
+        jr ra
+        nop
+        _u:
+        lli v0, Input.u
+        jr ra
+        nop
+        _d:
+        lli v0, Input.d
+        jr ra
+        nop
+        _uf:
+        lli v0, Input.uf
+        jr ra
+        nop
+        _ub:
+        lli v0, Input.ub
+        jr ra
+        nop
+        _df:
+        lli v0, Input.df
+        jr ra
+        nop
+        _db:
+        lli v0, Input.db
+        jr ra
+        nop
+    }
+
     scope WAVEDASH: {
         constant A_PRESSED(0x8000) // bitmask for a press
         constant B_PRESSED(0x4000) // bitmask for b press
@@ -506,8 +749,270 @@ scope KazuyaSpecial {
         scope main: {
             OS.routine_begin(0x20)
 
-            sw a0, 0x0010(sp)
-            
+            sw a0, 0x10(sp)
+
+            lw v0, 0x0084(a0) // v0 = player struct
+
+            // tmp variable 3 (0x0184) tracks whether the stick has
+            // returned to neutral (X and Y both within TILT_RANGE of
+            // center, checked independently) at some point since we
+            // entered the wavedash; all the stick-based cancels below
+            // require this to have happened first (jump is exempt, see
+            // cancel_check). Reset at the DASH->WAVEDASH transition itself
+            // (cancel_wavedash), not here on frame 1 - checking the frame
+            // here instead would lose a frame, since by the time this
+            // code runs on frame 1 it's already a frame too late.
+            scope check_neutral: {
+                lb t0, 0x01C2(v0) // t0 = stick_x
+                bgez t0, _x_positive
+                nop
+                subu t0, r0, t0 // t0 = abs(stick_x)
+                _x_positive:
+                slti t1, t0, TILT_RANGE // t1 = 1 if abs(stick_x) < TILT_RANGE
+                beqz t1, _end // not neutral: stick_x tilted
+                nop
+
+                lb t0, 0x01C3(v0) // t0 = stick_y
+                bgez t0, _y_positive
+                nop
+                subu t0, r0, t0 // t0 = abs(stick_y)
+                _y_positive:
+                slti t1, t0, TILT_RANGE // t1 = 1 if abs(stick_y) < TILT_RANGE
+                beqz t1, _end // not neutral: stick_y tilted
+                nop
+
+                lli t0, 1
+                sw t0, 0x0184(v0) // mark as returned to neutral
+
+                _end:
+            }
+
+            // frames 1-12: check for common cancels (dash/jump/crouch), and
+            // cancel to idle if the stick is pushed backward past the
+            // threshold that would register as a forward-tilt input
+            scope cancel_check: {
+                addiu sp, sp, -0x20 // allocate stack space
+                lw t0, 0x0078(a0) // t0 = current animation frame (float bits)
+                lui t1, 0x4140 // t1 = 12.0F
+                sltu t2, t1, t0
+                bnez t2, _end // skip if frame > 12
+                nop
+
+                // jump is always allowed, regardless of whether the stick
+                // has returned to neutral
+                lw a0, 0x0030(sp) // a0 = fighter_gobj
+                jal 0x8013F4D0 // ftCommonKneeBendCheckInterruptCommon(fighter_gobj)
+                nop
+                bnez v0, _cancelled
+                nop
+
+                // zone transition cancels: compares this frame's stick
+                // reading (0x01C2/0x01C3) against last frame's - read
+                // directly from the native prev_stick_x/prev_stick_y
+                // fields (0x01C4/0x01C5) rather than tracking it
+                // ourselves - via classify_zone_. db/b/ub/uf -> neutral
+                // cancels (db/ub/uf -> idle, b -> back dash); neutral ->
+                // db/ub/uf/df/f also cancels to idle immediately, without
+                // needing to return to neutral again first - for forward
+                // specifically, cancelling to idle regardless of how hard
+                // the input is works fine, since idle's own input handling
+                // already decides between a walk and a dash from there. b
+                // is deliberately not handled here on the "entering" side -
+                // the existing dash-magnitude check and _check_backward_cancel
+                // further below already give a hard neutral->back a dash
+                // and a soft one an idle cancel.
+                scope _zone_transition_check: {
+                    lw a0, 0x0030(sp) // a0 = fighter_gobj
+                    lw t0, 0x0084(a0) // t0 = player struct
+
+                    lb a0, 0x01C4(t0) // a0 = prev_stick_x
+                    lb a1, 0x01C5(t0) // a1 = prev_stick_y
+                    lw a2, 0x0044(t0) // a2 = facing direction (lr)
+                    jal classify_zone_
+                    nop
+                    or t4, v0, r0 // t4 = previous input (t0/t1 are clobbered by classify_zone_, so keep this out of their way)
+
+                    lw a0, 0x0030(sp) // a0 = fighter_gobj
+                    lw t0, 0x0084(a0) // t0 = player struct
+                    lb a0, 0x01C2(t0) // a0 = stick_x
+                    lb a1, 0x01C3(t0) // a1 = stick_y
+                    lw a2, 0x0044(t0) // a2 = facing direction (lr)
+                    jal classify_zone_
+                    nop
+                    or t5, v0, r0 // t5 = current input
+
+                    bnez t5, _check_enter // not neutral now - check the "entering a zone" cases
+                    nop
+
+                    // now neutral - what were we just holding?
+                    lli t3, Input.b
+                    beq t4, t3, _backdash
+                    nop
+                    lli t3, Input.db
+                    beq t4, t3, _idle
+                    nop
+                    lli t3, Input.ub
+                    beq t4, t3, _idle
+                    nop
+                    lli t3, Input.uf
+                    beq t4, t3, _idle
+                    nop
+                    b _end
+                    nop
+
+                    _check_enter:
+                    bnez t4, _end // wasn't neutral last frame either, nothing to do
+                    nop
+                    lli t3, Input.db
+                    beq t5, t3, _idle
+                    nop
+                    lli t3, Input.ub
+                    beq t5, t3, _idle
+                    nop
+                    lli t3, Input.uf
+                    beq t5, t3, _idle
+                    nop
+                    lli t3, Input.df
+                    beq t5, t3, _idle
+                    nop
+                    lli t3, Input.f
+                    beq t5, t3, _idle
+                    nop
+                    b _end
+                    nop
+
+                    _idle:
+                    lw a0, 0x0030(sp) // a0 = fighter_gobj
+                    jal 0x8013E1C8 // ftCommonWaitSetStatus(fighter_gobj)
+                    nop
+                    b _cancelled
+                    nop
+
+                    _backdash:
+                    lw a0, 0x0030(sp) // a0 = fighter_gobj
+                    lw t0, 0x0084(a0) // t0 = player struct
+                    lwc1 f0, 0x60(t0) // f0 = current ground x velocity
+                    neg.s f0, f0
+                    swc1 f0, 0x60(t0)
+
+                    OS.save_registers()
+                    lli a1, Kazuya.Action.DASHBACK // a1 = Action.DASHBACK
+                    or a2, r0, r0 // a2(starting frame) = 0.0
+                    lui a3, 0x3FC0 // a3(frame speed multiplier) = 1.5
+                    sw r0, 0x0010(sp) // argument 4 = 0
+                    jal 0x800E6F24 // change action
+                    nop
+                    OS.restore_registers()
+                    b _cancelled
+                    nop
+
+                    _end:
+                }
+
+                // everything else below requires the stick to have
+                // returned to neutral first (tmp variable 3)
+                lw a0, 0x0030(sp) // a0 = fighter_gobj
+                lw t0, 0x0084(a0) // t0 = player struct
+                lw t1, 0x0184(t0)
+                beqz t1, _end
+                nop
+
+                // dash input: same magnitude + recency check the stock
+                // dash-check uses internally (abs(stick_x) >= 56 and the
+                // native horizontal stick hold buffer < 3), just without
+                // calling that function directly, since it has side
+                // effects (inverting our facing to start a Turn on a
+                // backward input) that caused problems being invoked from
+                // here. Direction relative to facing then decides backdash
+                // vs a plain cancel to idle (forward doesn't need its own
+                // dash-starting code - see _forward_cancel below).
+                lw a0, 0x0030(sp) // a0 = fighter_gobj
+                lw t0, 0x0084(a0) // t0 = player struct
+                lb t1, 0x01C2(t0) // t1 = stick_x
+                bgez t1, _stickx_positive
+                nop
+                subu t2, r0, t1 // t2 = abs(stick_x)
+                b _range_check
+                nop
+                _stickx_positive:
+                or t2, t1, r0 // t2 = abs(stick_x)
+                _range_check:
+                slti t3, t2, 56 // t3 = 1 if abs(stick_x) < 56 (not dash range)
+                bnez t3, _check_backward_cancel // not far enough for a dash input, check the lighter cancels instead
+                nop
+
+                lbu t3, 0x026A(t0) // t3 = horizontal stick hold buffer
+                slti t3, t3, 3 // t3 = 1 if buffer < 3 (recent enough)
+                beqz t3, _check_backward_cancel // not recent enough for a dash input, check the lighter cancels instead
+                nop
+
+                lw t2, 0x0044(t0) // t2 = facing direction (lr)
+                mult t1, t2
+                mflo t1 // t1 = stick_x * facing direction (positive = forward, negative = backward)
+                bgez t1, _forward_cancel
+                nop
+
+                // backward: negate our current ground velocity (dash
+                // speed in whatever direction we were already moving) so
+                // we keep the same speed but move backwards, still facing
+                // the same way
+                lwc1 f0, 0x60(t0) // f0 = current ground x velocity
+                neg.s f0, f0
+                swc1 f0, 0x60(t0)
+
+                lw a0, 0x0030(sp) // a0 = fighter_gobj
+                OS.save_registers()
+                lli a1, Kazuya.Action.DASHBACK // a1 = Action.DASHBACK
+                or a2, r0, r0 // a2(starting frame) = 0.0
+                lui a3, 0x3FC0 // a3(frame speed multiplier) = 1.5
+                sw r0, 0x0010(sp) // argument 4 = 0
+                jal 0x800E6F24 // change action
+                nop
+                OS.restore_registers()
+                b _cancelled
+                nop
+
+                _forward_cancel:
+                // cancel to idle rather than explicitly starting a dash -
+                // the game's own idle input handling should pick the hard
+                // forward input back up and start a real dash on its own,
+                // the same way neutral -> f is handled in
+                // _zone_transition_check above
+                b _wait_cancel
+                nop
+
+                _check_backward_cancel:
+                lw a0, 0x0030(sp) // a0 = fighter_gobj
+                lw t0, 0x0084(a0) // t0 = player struct
+                lb t1, 0x01C2(t0) // t1 = stick_x
+                lw t2, 0x0044(t0) // t2 = facing direction (lr)
+                mult t1, t2
+                mflo t1 // t1 = stick_x * facing direction (positive = forward, negative = backward)
+                slti t2, t1, -19 // t2 = 1 if stick is backward past the FTilt threshold (20)
+                beqz t2, _end
+                nop
+
+                // backward input detected: cancel to idle - the game's
+                // own logic takes it from there (e.g. crouching, if the
+                // stick is still held down)
+                b _wait_cancel
+                nop
+
+                _wait_cancel:
+                lw a0, 0x20+0x10(sp) // a0 = fighter_gobj
+                jal 0x8013E1C8 // ftCommonWaitSetStatus(fighter_gobj)
+                nop
+
+                _cancelled:
+                addiu sp, sp, 0x20 // undo this scope's own stack allocation
+                OS.routine_end(0x20)
+
+                _end:
+                addiu sp, sp, 0x20 // undo this scope's own stack allocation
+            }
+
+            lw a0, 0x0010(sp) // restore a0 = fighter_gobj (clobbered by the checks above)
+
             lw v0, 0x0084(a0) // loads player struct into v0
             lhu t1, 0x01BE(v0) // load button press buffer
             andi t2, t1, A_PRESSED // t2 = 0x80 if (A_PRESSED); else t2 = 0
@@ -522,6 +1027,8 @@ scope KazuyaSpecial {
             nop
 
             cancel_a:
+            lw t0, 0x0084(a0) // t0 = player struct
+            
             OS.save_registers()
             lli a1, Kazuya.Action.GODFIST // a1 = Action.GODFIST
             lui a2, 0x3F80 // a2(starting frame) = 1.0
@@ -532,10 +1039,10 @@ scope KazuyaSpecial {
             OS.restore_registers()
 
             li at, GODFIST.proc_shield
-            sw at, 0x09F4(a2) // on hit shield function
+            sw at, 0x09F4(t0) // on hit shield function
             li at, GODFIST.proc_hitlag_start
-            sw at, 0xA04(a2) // on hit function
-            
+            sw at, 0xA04(t0) // on hit function
+
             OS.routine_end(0x20)
 
             cancel_b:
@@ -695,7 +1202,7 @@ scope KazuyaSpecial {
             // lw at, 0x7B0(a1) // at = fp->attack_damage (how much damage we're dealing)
             // Set hitlag to 0 frames
             lw at, 0x40(a1) // at = current hitlag
-            srl at, at, 1 // at = current hitlag / 2
+            srl at, at, 3 // at = current hitlag / 8
             sw at, 0x40(a1) // set new hitlag value
 
             OS.routine_end(0x20)
@@ -979,120 +1486,167 @@ scope KazuyaSpecial {
         }
     }
 
+    // @ Description
+    // Checks for the down/down-back -> down-forward wavedash-trigger
+    // gesture. Shared by DASH.main and TURN.main below, so wavedashing
+    // works the same regardless of which of the two Kazuya is coming out
+    // of. Progress (0x0AE4 - see OnActionChanged._dash_turn_reset_check
+    // for why this isn't one of the "tmp variable" slots) is reset once,
+    // in OnActionChanged._dash_turn_reset_check, only when actually
+    // entering the DASH/TURN pair from outside it - not here.
+    // states: 1 = waiting for Input.d or Input.db (down or down-back)
+    //         2 = Input.d/Input.db seen, waiting for Input.df
+    //             (down-forward, facing-relative) to trigger the
+    //             action change
+    // a0 - fighter_gobj
+    // returns
+    // v0 - 1 if the wavedash was triggered (the action was already
+    //      changed - the caller should return immediately rather than
+    //      running its own normal per-frame handling), 0 otherwise
+    scope check_wavedash_input_: {
+        OS.routine_begin(0x20)
+        sw a0, 0x10(sp)
+
+        lw v0, 0x0084(a0) // v0 = player struct
+        lw t0, 0x0AE4(v0)
+
+        lli t1, 0x1
+        beq t0, t1, check_down
+        nop
+
+        lli t1, 0x2
+        beq t0, t1, check_diagonal
+        nop
+
+        b _not_triggered
+        nop
+
+        check_down:
+        lb a0, 0x01C2(v0) // a0 = stick_x
+        lb a1, 0x01C3(v0) // a1 = stick_y
+        lw a2, 0x0044(v0) // a2 = facing direction (lr)
+        jal classify_zone_
+        nop
+        or t1, v0, r0 // t1 = classified input
+        lw a0, 0x0010(sp) // a0 = fighter_gobj (re-establish after the call)
+        lw v0, 0x0084(a0) // v0 = player struct
+
+        lli t2, Input.d
+        beq t1, t2, _down_ok
+        nop
+        lli t2, Input.db
+        bne t1, t2, _not_triggered
+        nop
+        _down_ok:
+
+        lli t0, 0x2
+        sw t0, 0x0AE4(v0) // Input.d/Input.db seen, set state to 2 (waiting for Input.df)
+
+        b _not_triggered
+        nop
+
+        check_diagonal:
+        lb a0, 0x01C2(v0) // a0 = stick_x
+        lb a1, 0x01C3(v0) // a1 = stick_y
+        lw a2, 0x0044(v0) // a2 = facing direction (lr)
+        jal classify_zone_
+        nop
+        or t1, v0, r0 // t1 = classified input
+        lw a0, 0x0010(sp) // a0 = fighter_gobj (re-establish after the call)
+        lw v0, 0x0084(a0) // v0 = player struct
+
+        lli t2, Input.df
+        bne t1, t2, _not_triggered
+        nop
+
+        // all conditions are met
+        // explicitly clear the neutral-tracking flag here rather than
+        // relying solely on WAVEDASH.main's own frame-1 reset - it was
+        // just set to 1 by our own check_neutral above, and if the
+        // reset there doesn't land precisely on frame 1, WAVEDASH
+        // would incorrectly start out thinking the stick already
+        // returned to neutral, letting it retrigger every frame while
+        // down+forward is held
+        sw r0, 0x0184(v0) // tmp variable 3 (neutral-tracking, WAVEDASH's own meaning for this field)
+
+        OS.save_registers()
+        lli a1, Kazuya.Action.WAVEDASH // a1 = Action.SWEEP1
+        or a2, r0, r0 // a2(starting frame) = 0.0
+        lui a3, 0x3F80 // a3(frame speed multiplier) = 1.0
+        lli t6, 0x0003 // ~
+        sw t6, 0x0010(sp) // argument 4 = 0x0003 keep hitboxes
+        jal 0x800E6F24 // change action
+        nop
+        OS.restore_registers()
+
+        lli v0, 1
+        OS.routine_end(0x20)
+
+        _not_triggered:
+        lli v0, 0
+        OS.routine_end(0x20)
+    }
+
     scope DASH: {
-        // tmp variable 3 0x0184 -- used to keep track of the wavedash input
-        // in the first frame, we set it to 0
-        // check for neutral stick to set it to 1
-        // then check for a diagonal (down-forward) input to trigger an action change
+        scope main: {
+            OS.routine_begin(0x20)
+
+            jal check_wavedash_input_
+            nop
+            bnez v0, _end // wavedash was triggered - action already changed
+            nop
+
+            jal 0x800D94C4 // original routine
+            nop
+
+            _end:
+            OS.routine_end(0x20)
+        }
+    }
+
+    scope TURN: {
+        scope main: {
+            OS.routine_begin(0x20)
+
+            jal check_wavedash_input_
+            nop
+            bnez v0, _end // wavedash was triggered - action already changed
+            nop
+
+            jal 0x8013E690 // original Turn main/update routine
+            nop
+
+            _end:
+            OS.routine_end(0x20)
+        }
+    }
+
+    scope DASHBACK: {
+        // Copy of Dash, but entered while already moving backwards relative
+        // to our facing (see DASH.cancel_dashback). Only cancellable into
+        // jump (no dash attack); on animation end, goes to Wait instead of
+        // continuing into Run.
 
         scope main: {
             OS.routine_begin(0x20)
 
-            lw v0, 0x0084(a0) // v0 = player struct
-
-            lw t0, 0x0078(a0) // t0 = current animation frame
-            lui t1, 0x4000 // t1 = 1.0F
-
-            // if frame != 1, skip
-            bne t0, t1, main_continue
-            nop
-            
-            sw r0, 0x0184(v0) // reset tmp variable 3 = 0
-
-            main_continue:
-            sw a0, 0x0010(sp)
-            
-            lw t0, 0x0184(v0)
-
-            lli t1, 0x0
-            beq t0, t1, check_neutral
+            lw at, 0x0078(a0) // at = current animation frame (counts down)
+            bgtz at, _end // skip if animation hasn't ended yet
             nop
 
-            lli t1, 0x1
-            beq t0, t1, check_diagonal
+            jal 0x8013E1C8 // ftCommonWaitSetStatus(fighter_gobj)
             nop
 
-            b main_normal
-            nop
-
-            check_neutral:
-            lb t2, 0x01C2(a2) // t2 = stick_x
-            bgez t2, check_neutral_continue			 // branch if positive value
-            nop
-            subu t2, r0, t2					 // t2 = abs(stick.x)
-            check_neutral_continue:
-            slti t1, t2, 70 // t1 = 1 if abs(stick_x) < 70
-            beq t1, r0, main_normal // stick must be neutral in X
-            nop
-
-            // lb t2, 0x01C3(a2) // t0 = stick_y
-            // mtc1 t2, f6 // f6 = stick_y
-            // abs.s f6, f6 // f6 = abs(stick_y)
-            // mfc1 t2, f6 // t0 = abs(stick_y)
-
-            // slti t1, t2, 70 // t1 = 1 if abs(stick_y) < 70
-            // beq t1, r0, main_normal // stick must be neutral in Y
-            // nop
-
-            lli t0, 0x1 // ~
-            sw t0, 0x0184(v0) // X and Y are neutral, set tmp var to 1
-
-            b main_normal
-            nop
-
-            check_diagonal:
-
-            // Check Y
-            lb t0, 0x01C3(v0) // t0 = stick_y
-            slti t1, t0, -19 // at = 1 if stick_y < -19, else at = 0
-            beql t1, r0, main_normal // branch if stick_y >= -20
-            nop
-
-            // Check X
-            lb t0, 0x01C2(a2) // t0 = stick_x
-            lli t1, 20 // t1 = stick range
-            lw t2, 0x0044(v0) // t2 = facing direction (1 = right, -1 = left)
-
-            slti t3, t2, 0
-            beq t3, r0, facing_right
-            nop
-
-            facing_left:
-            slti t1, t0, -10 // t1 = 1 if stick_x < -39, else at = 0
-            beql t1, r0, main_normal // branch if stick_x >= -40
-            nop
-
-            b check_diagonal_success // check ok
-            nop
-
-            facing_right:
-            slti t1, t0, 10 // t1 = 1 if stick_y < -39, else at = 0
-            bnel t1, r0, main_normal // branch if stick_x >= -40
-            nop
-
-            b check_diagonal_success // check ok
-            nop
-
-            check_diagonal_success:
-            // all conditions are met
-            b cancel_wavedash
-            nop
-
-            cancel_wavedash:
-            OS.save_registers()
-            lli a1, Kazuya.Action.WAVEDASH // a1 = Action.SWEEP1
-            or a2, r0, r0 // a2(starting frame) = 0.0
-            lui a3, 0x3F80 // a3(frame speed multiplier) = 1.0
-            lli t6, 0x0003 // ~
-            sw t6, 0x0010(sp) // argument 4 = 0x0003 keep hitboxes
-            jal 0x800E6F24 // change action
-            nop
-            OS.restore_registers()
+            _end:
             OS.routine_end(0x20)
+        }
 
-            main_normal:
-            jal 0x800D94C4 // original routine
+        scope interrupt: {
+            OS.routine_begin(0x20)
+
+            jal 0x8013F4D0 // ftCommonKneeBendCheckInterruptCommon(fighter_gobj) - jump cancel only
             nop
+
             OS.routine_end(0x20)
         }
     }
@@ -1747,8 +2301,7 @@ scope KazuyaUSP {
     constant MOVE_SPEED_Y(0x4310) // float 144
     constant GRAVITY(0x4040) // float 3
     constant GRAVITY_PEAK(0x4000) // float -2.0
-    constant GRAVITY_FALLING(0x4320) // float 20.0
-    constant MAX_FALLING(0x4320) // float 120
+    constant MAX_FALLING(0x4348) // float 200
     constant B_PRESSED(0x40) // bitmask for b press
 
     // @ Description

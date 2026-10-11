@@ -1713,7 +1713,7 @@ scope CBKnucklesNSP {
         or      a1, r0, r0                  // Current frame = 0
 
         jal     0x800269C0                  // Play SFX
-        addiu   a0, r0, 0x543               // Knuckles climb cling = 0x543
+        lli     a0, CBKnuckles.FGM.CLIMB_CLING
 
         lw      ra, 0x14(sp)                // Load return address
         _end:

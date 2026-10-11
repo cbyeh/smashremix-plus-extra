@@ -8,6 +8,9 @@ definitions:
   series_logo_css: SONIC
   series_logo_model: SONIC
   select_pose: 4
+  break_the_targets: SONIC
+  board_the_platforms: SONIC
+  variant_type: NA
 
 shield_pose: "0x013A"
 
@@ -25,6 +28,24 @@ results:
   name_scale: 0.75
   name_x: 25
   wins_x: 180
+
+singleplayer:
+  stage1: "STAGE_PUMPKINHILL"
+  stage2: "STAGE_EMERALDSHRINE"
+  stage3: "STAGE_SKYSANCTUARY"
+  # Game will crash if it can't find a unique stage
+  # (i.e. not used prior to character being rolled)
+  # from the stage list during initial 1P setup
+
+  duo: # Duo support doesn't exist yet, adding parameters nonetheless
+    anim: "File.MKNUCKLES_ANIM_DUO_POSE"
+    moveset: "MKnuckles.duo_moveset"
+    # flags: 0
+
+  team:
+    anim: "File.SONIC_TEAM_POSE"
+    moveset: "0x80000000"
+    # flags: 0
 
 12cb:
   anim: "File.MKNUCKLES_ANIM_DOWNSTAND_U"
@@ -80,7 +101,7 @@ sounds:
   "060F": ROLL
   "0610": SHIELDBREAK
   "0611": STUNNED
-  "0612": SLEEP # same as STUNNED
+  "0612": SLEEP
   "0613": TAUNT
   "0614": TECH
   "0615": TEETER
