@@ -1,3 +1,4 @@
+import hashlib
 import os
 import re
 import yaml
@@ -12,7 +13,7 @@ from smashremix_extra.content_filter import filter_folders
 # but only the boot DMA (up to the 64 KB block past custom_heap) has to fit;
 # the runtime heap itself lives in RAM. 7 characters use 0x1D0000. The build
 # fails (see the main.asm guard) if this is too small.
-ASM_HEADROOM = 0x200000  # 2 MB
+ASM_HEADROOM = 0x240000  # 2.25 MB
 
 
 class AudioProcessor:
@@ -194,6 +195,118 @@ class AudioProcessor:
             line="\t"+"\n\t".join(all_volume),
             inserter=lineinfile.AfterLast(r"^\s*add_master_volume_override\(")
         )
+
+    def alias_remix_midis(self) -> None:
+        """
+        Point every Remix MIDI at a vanilla SSB track instead of inserting it
+        (extra_content.yaml: remix_music: vanilla). Frees ~3 MiB of ROM.
+
+        Track IDs, toggles, stage assignments and overrides keep working because
+        each Remix ID still gets its music-table entry; only the entry's data
+        is a vanilla track's. Victory themes go to a vanilla victory fanfare,
+        menu tracks to the vanilla main menu, the rest to a vanilla stage track
+        from the same series where there is one. insert_external_midi (EXTRA
+        victory themes and music packs) is untouched, as are instruments.
+        """
+        path = "src/midi.asm"
+        with open(path, "r", encoding="utf-8") as f:
+            asm = f.read()
+
+        # vanilla BGM ids (src/BGM.asm). 0 (Dream Land) is moved by Remix, so
+        # its original table entry is stale; never alias to it.
+        win = {"LINK": 21, "FOX": 16, "SAMUS": 13, "NESS": 17, "PIKACHU": 20,
+               "KIRBY": 15, "DK": 14, "MARIO": 12}
+        victory_series = [
+            (("GANON", "YOUNGLINK", "SHEIK", "MARINA"), "LINK"),
+            (("FALCO", "WOLF"), "FOX"), (("DSAMUS",), "SAMUS"),
+            (("LUCAS",), "NESS"), (("MEWTWO",), "PIKACHU"),
+            (("DEDEDE",), "KIRBY"), (("DKING", "LANKY"), "DK"),
+        ]
+        series_stage = [
+            (("yoshi",), 8), (("dk",), 5),
+            (("zelda", "lttp", "awakening", "ocarina", "majora", "skyward"), 9),
+            (("metroid",), 1), (("starfox",), 4),
+            (("pokemon", "stadium", "heypika"), 7), (("kirby", "dream"), 34),
+            (("ssb", "brawl", "melee"), 25), (("fzero",), 37),
+            (("smb", "sml", "smw", "sm64", "sunshine", "nsmb", "drm", "smk",
+              "mk64", "mkds", "mario", "smrpg", "paper", "talentstudio",
+              "ddrmm", "wario", "ww"), 6),
+        ]
+        spread = [1, 2, 4, 5, 6, 7, 8, 9, 25, 34, 36, 37]
+        menu_words = ("MENU", "MAIN_", "FILESELECT", "GALLERY", "OPTIONS",
+                      "STAGESEL", "PAUSE", "ITSATRAP", "PLAY_A_MINIGAME",
+                      "ENEMYCARD", "WATCH_THEME", "BRAWL")
+        games = set(re.findall(r"^\s*add_game\((\w+),", asm, re.M))
+
+        def pick(name, game):
+            if "VICTORY" in name:
+                for keys, who in victory_series:
+                    if any(k in name for k in keys):
+                        return win[who]
+                return win["MARIO"]
+            if any(w in name for w in menu_words):
+                return 44  # menu.MAIN
+            for keys, track in series_stage:
+                if game and any(game.startswith(k) for k in keys):
+                    return track
+            # stable spread (Python's str hash is salted per run)
+            return spread[int(hashlib.md5(name.encode()).hexdigest(), 16) % len(spread)]
+
+        calls = re.findall(
+            r"^\s*insert_(?:midi|extra_midi|named_extra_midi)\((\w+)([^\n]*)\)",
+            asm, re.M)
+        aliases = []
+        for name, rest in calls:
+            game = next((t for t in re.findall(r"\b\w+\b", rest) if t in games), None)
+            aliases.append(f"    global define ALIAS_{name}({pick(name, game)})")
+
+        rom = re.search(r'read32 MUSIC_TABLE, "([^"]+)"', asm).group(1)
+        old_body = (
+            "        origin  MUSIC_TABLE_END\n"
+            "        dw      origin_MIDI_{file_name} - MUSIC_TABLE\n"
+            "        dw      MIDI_{file_name}.size\n"
+            "        global variable MUSIC_TABLE_END(origin())\n"
+            "\n"
+            "        // insert the MIDI file and update MIDI_BANK_END\n"
+            "        origin  MIDI_BANK_END\n"
+            "        constant origin_MIDI_{file_name}(origin())\n"
+            "        insert  MIDI_{file_name}, \"{path_MIDI_{file_name}}\"\n"
+            "        OS.align(4)\n"
+            "        global variable MIDI_BANK_END(origin())\n"
+        )
+        new_body = (
+            "        // +EXTRA remix_music: vanilla -- reuse vanilla track {ALIAS_{file_name}} instead of inserting this MIDI\n"
+            f"        read32  ALIAS_OFFSET_{{file_name}}, \"{rom}\", MUSIC_TABLE + 0x4 + ({{ALIAS_{{file_name}}}} * 0x8)\n"
+            f"        read32  ALIAS_SIZE_{{file_name}}, \"{rom}\", MUSIC_TABLE + 0x8 + ({{ALIAS_{{file_name}}}} * 0x8)\n"
+            "        origin  MUSIC_TABLE_END\n"
+            "        dw      ALIAS_OFFSET_{file_name}\n"
+            "        dw      ALIAS_SIZE_{file_name}\n"
+            "        global variable MUSIC_TABLE_END(origin())\n"
+        )
+        old_largest = (
+            "        if MIDI_{file_name}.size > largest_midi {\n"
+            "            global variable largest_midi(MIDI_{file_name}.size)\n"
+        )
+        new_largest = (
+            "        if ALIAS_SIZE_{file_name} > largest_midi {\n"
+            "            global variable largest_midi(ALIAS_SIZE_{file_name})\n"
+        )
+        anchor = "    move_dream_land_midi()\n"
+        # Only the 8-argument insert_midi macro matches: insert_external_midi
+        # uses {midi_id} rather than {file_name}.
+        for old, new in ((old_body, new_body), (old_largest, new_largest)):
+            if old not in asm:
+                logger.error("remix_music: vanilla: midi.asm layout changed; update alias_remix_midis()")
+                raise SystemExit(1)
+            asm = asm.replace(old, new, 1)
+        if asm.count(anchor) != 1:
+            logger.error("remix_music: vanilla: move_dream_land_midi() call not found")
+            raise SystemExit(1)
+        asm = asm.replace(anchor, anchor + "\n".join(aliases) + "\n")
+
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(asm)
+        print(f"remix_music: vanilla -- aliased {len(aliases)} Remix MIDIs to vanilla tracks")
 
     def patch_bgm_asm(self) -> None:
         """Patch BGM.asm with menu music track definitions."""

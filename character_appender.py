@@ -305,6 +305,9 @@ class CharacterAppender:
         self.audio_proc = AudioProcessor(
             music_selection=content_cfg.get("music")
         )
+        # "vanilla": point every Remix MIDI at a vanilla SSB track instead of
+        # inserting it, to free ROM space (see AudioProcessor.alias_remix_midis).
+        self.remix_music = content_cfg.get("remix_music", "keep")
 
         last_sfx_id = 694  # Last vanilla SFX ID
 
@@ -753,6 +756,11 @@ class CharacterAppender:
             self.char_proc.midi_bend_range_overrides,
             self.char_proc.midi_master_volume_overrides,
         )
+        if self.remix_music == "vanilla":
+            self.audio_proc.alias_remix_midis()
+        elif self.remix_music != "keep":
+            print(f"ERROR: extra_content.yaml remix_music must be 'keep' or 'vanilla', got {self.remix_music!r}")
+            sys.exit(1)
 
     def _patch_character_asm(self):
         # File.asm

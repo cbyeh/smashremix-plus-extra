@@ -19,18 +19,27 @@
 #   Kazuya 0.56  MetaKnight 0.75  Ryu 0.76  Cloud 0.88  YZelda 0.93  Terry 1.06
 # All 17 music packs together are only ~0.3 MB, so cutting music buys little.
 
+# experiment/all-characters: all 19 cost ~15 MiB of characters and don't fit under
+# 64 MiB even with remix_music: vanilla. These 13 fit; the Knuckles variants,
+# Spiderman and Snake (~0.9-1.15 MiB each) do not.
 characters:
+  - Birdo
   - Cloud
+  - DKUlt
   - Kazuya
-  - MetaKnight
-  - Ryu
-  - YZelda
   - Ken
+  - MRGAW
+  - MRGAWPLUS
+  - MRGAWTHREED
+  - MetaKnight
+  - Rebecca
+  - Ryu
   - Terry
-  # Terry owns FGC.asm (the `scope FGC` shared-mechanics file). Nothing outside
-  # extra_characters/Terry/ references that scope, and its many Kazuya blocks
-  # are all inside `if {defined Character.CHARACTER_ADDED_KAZUYA}` guards, so
-  # removing Terry does not affect Kazuya. If you re-add Terry, keep FGC.asm.
+  - YZelda
+
+# Replace all Remix MIDIs with vanilla SSB tracks (frees ~3 MiB of ROM).
+# "keep" (default) or "vanilla". EXTRA victory themes are unaffected.
+remix_music: vanilla
 
 # EXTRA stages omitted for size headroom.
 stages: []
