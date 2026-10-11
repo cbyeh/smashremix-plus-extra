@@ -30,6 +30,17 @@ ROM_ALIGNMENT = 0x10000
 # Most flash carts and iOS emulators refuse ROMs at or above 64 MiB.
 ROM_SIZE_LIMIT = 64 * 1024 * 1024
 
+# Replace Character.asm's REMIX_1P / ALLSTAR SRAM.block lines: RAM keeps 32-byte
+# records, SRAM gets 16 (see rec_pack_ in BONUS_PACKED_BLOCK_ASM).
+ONEP_PACKED_BLOCK_ASM = """\
+    {name}_HIGH_SCORE_TABLE_BLOCK:
+    dw      SRAM.address
+    dw      pc() + 0xC
+    dw      NUM_CHARACTERS * 0x10
+    dw      0
+    fill    NUM_CHARACTERS * 0x20
+    SRAM.address = SRAM.address + (NUM_CHARACTERS * 0x10)"""
+
 # Replaces Bonus.asm's REMIX_BONUS_HIGH_SCORE_TABLE_BLOCK line; see
 # CharacterAppender._patch_bonus_sram_packing(). Same block header as
 # SRAM.block(), but the RAM table keeps 6-byte entries while SRAM gets 5.
@@ -46,53 +57,147 @@ BONUS_PACKED_BLOCK_ASM = """\
     OS.align(4)
 
     // @ Description
-    // SRAM.write_ wrapper: packs the Remix Bonus table in place, writes it, then unpacks it.
+    // SRAM.write_ wrapper: packed tables (Remix Bonus, Remix 1P, All-Star) are packed in
+    // place, written, then unpacked again; everything else is a plain write.
     // a0 - RAM source, a1 - SRAM destination, a2 - size
     scope sram_write_packed_: {
         li      t0, remix_bonus_high_score_table
-        bne     a0, t0, _plain              // not the Bonus table: plain write
+        beq     a0, t0, _packed
+        lli     t1, 0x0000                  // t1 = 0: Bonus layout
+        li      t0, Character.REMIX_1P_HIGH_SCORE_TABLE
+        beq     a0, t0, _packed
+        lli     t1, 0x0001                  // t1 = 1: 1P record layout
+        li      t0, Character.ALLSTAR_HIGH_SCORE_TABLE
+        beq     a0, t0, _packed
         nop
+        j       SRAM.write_                 // not a packed table: plain write
+        nop
+
+        _packed:
         addiu   sp, sp, -0x0020             // allocate stack space
         sw      ra, 0x0014(sp)              // save registers
         sw      a0, 0x0004(sp)              // ~
         sw      a1, 0x0008(sp)              // ~
         sw      a2, 0x000C(sp)              // ~
-        jal     bonus_pack_
-        nop
+        jal     pack_table_                 // a0 = table, t1 = layout
+        sw      t1, 0x0010(sp)              // ~
         lw      a0, 0x0004(sp)              // restore arguments
         lw      a1, 0x0008(sp)              // ~
         jal     SRAM.write_
         lw      a2, 0x000C(sp)              // ~
-        jal     bonus_unpack_               // restore the RAM layout
-        nop
+        lw      a0, 0x0004(sp)              // a0 = table
+        jal     unpack_table_               // restore the RAM layout
+        lw      t1, 0x0010(sp)              // t1 = layout
         lw      ra, 0x0014(sp)              // restore registers
         jr      ra
         addiu   sp, sp, 0x0020              // deallocate stack space
+    }
 
-        _plain:
-        j       SRAM.write_
+    // @ Description
+    // SRAM.read_ wrapper: packed tables are unpacked in place after reading.
+    // a0 - SRAM source, a1 - RAM destination, a2 - size
+    scope sram_read_packed_: {
+        li      t0, remix_bonus_high_score_table
+        beq     a1, t0, _packed
+        lli     t1, 0x0000                  // t1 = 0: Bonus layout
+        li      t0, Character.REMIX_1P_HIGH_SCORE_TABLE
+        beq     a1, t0, _packed
+        lli     t1, 0x0001                  // t1 = 1: 1P record layout
+        li      t0, Character.ALLSTAR_HIGH_SCORE_TABLE
+        beq     a1, t0, _packed
+        nop
+        j       SRAM.read_                  // not a packed table: plain read
+        nop
+
+        _packed:
+        addiu   sp, sp, -0x0020             // allocate stack space
+        sw      ra, 0x0014(sp)              // save registers
+        sw      a1, 0x0008(sp)              // ~
+        jal     SRAM.read_
+        sw      t1, 0x0010(sp)              // ~
+        lw      a0, 0x0008(sp)              // a0 = table
+        jal     unpack_table_
+        lw      t1, 0x0010(sp)              // t1 = layout
+        lw      ra, 0x0014(sp)              // restore registers
+        jr      ra
+        addiu   sp, sp, 0x0020              // deallocate stack space
+    }
+
+    // a0 = table, t1 = layout (0 = Bonus, 1 = 1P record)
+    scope pack_table_: {
+        beqz    t1, bonus_pack_
+        nop
+        b       rec_pack_
+        nop
+    }
+
+    scope unpack_table_: {
+        beqz    t1, bonus_unpack_
+        nop
+        b       rec_unpack_
         nop
     }
 
     // @ Description
-    // SRAM.read_ wrapper: reads the packed Remix Bonus table, then unpacks it in place.
-    // a0 - SRAM source, a1 - RAM destination, a2 - size
-    scope sram_read_packed_: {
-        li      t0, remix_bonus_high_score_table
-        bne     a1, t0, _plain              // not the Bonus table: plain read
-        nop
-        addiu   sp, sp, -0x0020             // allocate stack space
-        sw      ra, 0x0014(sp)              // save registers
-        jal     SRAM.read_
-        nop
-        jal     bonus_unpack_
-        nop
-        lw      ra, 0x0014(sp)              // restore registers
+    // Packs Character.NUM_CHARACTERS 32-byte 1P records at a0 into 16 bytes each, front to back.
+    // Only bytes 0x00-0x0C and 0x1D are ever written (vanilla's 1P record writer at 0x800D6738);
+    // the rest stay 0. Keep 0x00-0x0E and carry 0x1D in the always-zero byte 0x0F.
+    scope rec_pack_: {
+        or      t0, a0, r0                  // t0 = 32-byte read cursor
+        or      t1, a0, r0                  // t1 = 16-byte write cursor
+        lli     t2, Character.NUM_CHARACTERS // t2 = records left
+        _loop:
+        lw      t3, 0x0000(t0)
+        lw      t4, 0x0004(t0)
+        lw      t5, 0x0008(t0)
+        lw      t6, 0x000C(t0)
+        lbu     t7, 0x001D(t0)
+        srl     t6, t6, 8
+        sll     t6, t6, 8
+        or      t6, t6, t7                  // byte 0x0F = byte 0x1D
+        sw      t3, 0x0000(t1)
+        sw      t4, 0x0004(t1)
+        sw      t5, 0x0008(t1)
+        sw      t6, 0x000C(t1)
+        addiu   t0, t0, 0x0020
+        addiu   t2, t2, -0x0001
+        bnez    t2, _loop
+        addiu   t1, t1, 0x0010
         jr      ra
-        addiu   sp, sp, 0x0020              // deallocate stack space
+        nop
+    }
 
-        _plain:
-        j       SRAM.read_
+    // @ Description
+    // Inverse of rec_pack_, back to front so unpacked records never overwrite unread packed ones.
+    scope rec_unpack_: {
+        lli     t2, Character.NUM_CHARACTERS // t2 = records left
+        addiu   t0, t2, -0x0001
+        sll     t1, t0, 5
+        addu    t1, a0, t1                  // t1 = last 32-byte record
+        sll     t0, t0, 4
+        addu    t0, a0, t0                  // t0 = last 16-byte record
+        _loop:
+        lw      t3, 0x0000(t0)
+        lw      t4, 0x0004(t0)
+        lw      t5, 0x0008(t0)
+        lw      t6, 0x000C(t0)
+        andi    t7, t6, 0x00FF              // t7 = byte 0x1D
+        srl     t6, t6, 8
+        sll     t6, t6, 8                   // byte 0x0F back to 0
+        sw      t3, 0x0000(t1)
+        sw      t4, 0x0004(t1)
+        sw      t5, 0x0008(t1)
+        sw      t6, 0x000C(t1)
+        sw      r0, 0x0010(t1)
+        sw      r0, 0x0014(t1)
+        sw      r0, 0x0018(t1)
+        sw      r0, 0x001C(t1)
+        sb      t7, 0x001D(t1)
+        addiu   t0, t0, -0x0010
+        addiu   t2, t2, -0x0001
+        bnez    t2, _loop
+        addiu   t1, t1, -0x0020
+        jr      ra
         nop
     }
 
@@ -528,6 +633,10 @@ class CharacterAppender:
         15-0 = last two bytes. The RAM table keeps its 6-byte layout (so none of
         the code that reads it changes); only SRAM holds the 5-byte packing,
         converted in place around SRAM.write_/read_.
+
+        The Remix 1P and All-Star tables (32-byte vanilla-format records per
+        character) get the same treatment: only bytes 0x00-0x0C and 0x1D are
+        ever written to them, so SRAM keeps 16 bytes per record.
         """
         def sub_once(path, pattern, repl):
             with open(path, "r", encoding="utf-8") as f:
@@ -540,6 +649,9 @@ class CharacterAppender:
                 f.write(content)
 
         sub_once("src/Bonus.asm", r"^\s*REMIX_BONUS_HIGH_SCORE_TABLE_BLOCK:; SRAM\.block\(.*\)\s*$", BONUS_PACKED_BLOCK_ASM)
+        for name in ("REMIX_1P", "ALLSTAR"):
+            sub_once("src/Character.asm", rf"^\s*{name}_HIGH_SCORE_TABLE_BLOCK:; SRAM\.block\(.*\).*$",
+                     ONEP_PACKED_BLOCK_ASM.format(name=name))
         sub_once("src/SRAM.asm", r"^\s*jal\s+read_\s+// read\s*$",
                  "        jal     Bonus.sram_read_packed_     // read (+EXTRA: unpacks the Remix Bonus table)")
         sub_once("src/SRAM.asm", r"^\s*jal\s+write_\s+// write\s*$",
@@ -587,6 +699,8 @@ class CharacterAppender:
         for path in ("src/Toggles.asm", "src/SRAM.asm"):
             with open(path, "rb") as f:
                 selection += f.read()
+        # ...and so must a change to how the high-score tables are packed.
+        selection += (BONUS_PACKED_BLOCK_ASM + ONEP_PACKED_BLOCK_ASM).encode("utf-8")
 
         # REVISION is read with `lli`, a 16-bit immediate, so it must fit in
         # 0x0000-0xFFFF. Stay clear of stock values to avoid colliding with a
