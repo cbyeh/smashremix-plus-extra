@@ -4,10 +4,10 @@
 # Folders starting with "_" are always skipped.
 
 # NOTE ON SIZE BUDGET
-# The region between original_extra.z64 and MIDI_BANK (ASM_HEADROOM in
-# smashremix_extra/audio/processor.py) must stay at Remix's stock 4MB -- its
-# tail is the runtime heap, and shrinking it caused intermittent
-# "ALLOC OVERFLOW" crashes. Pay for ROM size here instead.
+# Two hard limits, both checked at build time:
+#   - ROM under 64 MiB (7 characters: 63.28 MiB, ~740 KB spare)
+#   - save data under 32 KB SRAM (7 characters: 30,912 bytes; each extra
+#     character costs ~281 bytes)
 #
 # Characters are the only large lever. The MIDI region (~14.8 MB) is Remix's
 # own music and is not configurable from this file.
@@ -25,11 +25,8 @@ characters:
   - MetaKnight
   - Ryu
   - YZelda
-  # Ken and Terry removed to fund restoring ASM_HEADROOM to 4MB.
-  # Ken alone left the ROM 12,496 bytes over the 64 MiB limit; dropping Terry
-  # buys ~1.06 MB of real margin.
-  # Swap entries above if you would rather keep a different roster.
-  #
+  - Ken
+  - Terry
   # Terry owns FGC.asm (the `scope FGC` shared-mechanics file). Nothing outside
   # extra_characters/Terry/ references that scope, and its many Kazuya blocks
   # are all inside `if {defined Character.CHARACTER_ADDED_KAZUYA}` guards, so

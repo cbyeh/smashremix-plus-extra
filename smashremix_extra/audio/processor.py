@@ -7,11 +7,12 @@ from typing import List, Optional
 from smashremix_extra.logger import logger
 from smashremix_extra.content_filter import filter_folders
 
-# Size of the region reserved between original_extra.z64 and MIDI_BANK for the
-# custom ASM, midi_memory_block, file_table, and the relocated runtime heap.
-# This matches Remix's stock reservation; see patch_midi_asm() for why it must
-# not be trimmed.
-ASM_HEADROOM = 0x400000  # 4 MB
+# ROM space reserved between original_extra.z64 and MIDI_BANK for the custom
+# ASM, midi_memory_block and file_table, up to custom_heap. Remix reserves 4 MB,
+# but only the boot DMA (up to the 64 KB block past custom_heap) has to fit;
+# the runtime heap itself lives in RAM. 7 characters use 0x1D0000. The build
+# fails (see the main.asm guard) if this is too small.
+ASM_HEADROOM = 0x200000  # 2 MB
 
 
 class AudioProcessor:
@@ -150,17 +151,7 @@ class AudioProcessor:
         char_volume_overrides: List[str],
     ) -> None:
         """Patch midi.asm: MIDI_BANK address, game series, tracks, and overrides."""
-        # The region between original_extra and MIDI_BANK holds the custom ASM,
-        # midi_memory_block, file_table, and finally custom_heap (see
-        # smashremix/main.asm). custom_heap is the LAST label, and the runtime
-        # heap grows into whatever space is left above it -- Boot.asm derives the
-        # boot DMA size from ((custom_heap - 0x80400000) >> 16) + 1.
-        #
-        # So this value is not spare padding: its tail IS the runtime heap.
-        # Shrinking it to 0x280000 (2.5MB) recovered ROM space but starved the
-        # heap, producing intermittent "ALLOC OVERFLOW" crashes. Keep Remix's
-        # stock 4MB and pay for ROM size by trimming content instead
-        # (see extra_content.yaml).
+        # See ASM_HEADROOM for how this region is sized.
         asm_headroom = ASM_HEADROOM
         midi_bank_addr = original_size + asm_headroom
         lineinfile.add_line_to_file(
