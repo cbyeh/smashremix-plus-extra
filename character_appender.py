@@ -30,6 +30,186 @@ ROM_ALIGNMENT = 0x10000
 # Most flash carts and iOS emulators refuse ROMs at or above 64 MiB.
 ROM_SIZE_LIMIT = 64 * 1024 * 1024
 
+# Replaces Bonus.asm's REMIX_BONUS_HIGH_SCORE_TABLE_BLOCK line; see
+# CharacterAppender._patch_bonus_sram_packing(). Same block header as
+# SRAM.block(), but the RAM table keeps 6-byte entries while SRAM gets 5.
+BONUS_PACKED_BLOCK_ASM = """\
+    constant BONUS_ENTRIES(NUM_BONUS_STAGES * Character.NUM_CHARACTERS)
+    constant BONUS_PACKED_SIZE(((BONUS_ENTRIES * 5 + 0xF) / 0x10) * 0x10)
+    REMIX_BONUS_HIGH_SCORE_TABLE_BLOCK:
+    dw      SRAM.address
+    dw      pc() + 0xC
+    dw      BONUS_PACKED_SIZE
+    dw      0
+    fill    BONUS_ENTRIES * 6
+    SRAM.address = SRAM.address + BONUS_PACKED_SIZE
+    OS.align(4)
+
+    // @ Description
+    // SRAM.write_ wrapper: packs the Remix Bonus table in place, writes it, then unpacks it.
+    // a0 - RAM source, a1 - SRAM destination, a2 - size
+    scope sram_write_packed_: {
+        li      t0, remix_bonus_high_score_table
+        bne     a0, t0, _plain              // not the Bonus table: plain write
+        nop
+        addiu   sp, sp, -0x0020             // allocate stack space
+        sw      ra, 0x0014(sp)              // save registers
+        sw      a0, 0x0004(sp)              // ~
+        sw      a1, 0x0008(sp)              // ~
+        sw      a2, 0x000C(sp)              // ~
+        jal     bonus_pack_
+        nop
+        lw      a0, 0x0004(sp)              // restore arguments
+        lw      a1, 0x0008(sp)              // ~
+        jal     SRAM.write_
+        lw      a2, 0x000C(sp)              // ~
+        jal     bonus_unpack_               // restore the RAM layout
+        nop
+        lw      ra, 0x0014(sp)              // restore registers
+        jr      ra
+        addiu   sp, sp, 0x0020              // deallocate stack space
+
+        _plain:
+        j       SRAM.write_
+        nop
+    }
+
+    // @ Description
+    // SRAM.read_ wrapper: reads the packed Remix Bonus table, then unpacks it in place.
+    // a0 - SRAM source, a1 - RAM destination, a2 - size
+    scope sram_read_packed_: {
+        li      t0, remix_bonus_high_score_table
+        bne     a1, t0, _plain              // not the Bonus table: plain read
+        nop
+        addiu   sp, sp, -0x0020             // allocate stack space
+        sw      ra, 0x0014(sp)              // save registers
+        jal     SRAM.read_
+        nop
+        jal     bonus_unpack_
+        nop
+        lw      ra, 0x0014(sp)              // restore registers
+        jr      ra
+        addiu   sp, sp, 0x0020              // deallocate stack space
+
+        _plain:
+        j       SRAM.read_
+        nop
+    }
+
+    // @ Description
+    // Packs each 6-byte entry (two 3-byte fields) into 5 bytes (two 20-bit fields), front to back.
+    // Field: bit 19 = count flag (first byte 0x0A), bits 18-16 = first byte (time, <= 7), bits 15-0 = last two bytes.
+    // Uses t0-t7 and at only (no mult/div: a caller keeps v0 in LO).
+    scope bonus_pack_: {
+        li      t0, remix_bonus_high_score_table // t0 = 6-byte read cursor
+        or      t1, t0, r0                  // t1 = 5-byte write cursor (never passes t0)
+        li      t2, BONUS_ENTRIES           // t2 = entries left
+
+        _loop:
+        // targets field -> t6
+        lbu     t3, 0x0000(t0)
+        lbu     t4, 0x0001(t0)
+        lbu     t5, 0x0002(t0)
+        sll     t4, t4, 8
+        or      t4, t4, t5                  // t4 = last two bytes
+        lli     at, 0x000A
+        beq     t3, at, _t_flag             // count form
+        sltiu   at, t3, 0x0008              // at = 1 if first byte fits in 3 bits
+        bnez    at, _t_done                 // time form
+        sll     t6, t3, 16                  // t6 = first byte << 16
+        or      t4, r0, r0                  // out of range: store as an empty record
+        _t_flag:
+        lui     t6, 0x0008                  // t6 = count flag (bit 19)
+        _t_done:
+        or      t6, t6, t4                  // t6 = 20-bit targets value
+
+        // platforms field -> t7
+        lbu     t3, 0x0003(t0)
+        lbu     t4, 0x0004(t0)
+        lbu     t5, 0x0005(t0)
+        sll     t4, t4, 8
+        or      t4, t4, t5
+        lli     at, 0x000A
+        beq     t3, at, _p_flag
+        sltiu   at, t3, 0x0008
+        bnez    at, _p_done
+        sll     t7, t3, 16
+        or      t4, r0, r0
+        _p_flag:
+        lui     t7, 0x0008
+        _p_done:
+        or      t7, t7, t4                  // t7 = 20-bit platforms value
+
+        srl     t3, t6, 12
+        sb      t3, 0x0000(t1)              // targets bits 19-12
+        srl     t3, t6, 4
+        sb      t3, 0x0001(t1)              // targets bits 11-4
+        sll     t3, t6, 4                   // targets bits 3-0 -> high nibble
+        srl     t4, t7, 16                  // platforms bits 19-16 -> low nibble
+        or      t3, t3, t4
+        sb      t3, 0x0002(t1)
+        srl     t3, t7, 8
+        sb      t3, 0x0003(t1)              // platforms bits 15-8
+        sb      t7, 0x0004(t1)              // platforms bits 7-0
+
+        addiu   t0, t0, 0x0006
+        addiu   t2, t2, -0x0001
+        bnez    t2, _loop
+        addiu   t1, t1, 0x0005
+        jr      ra
+        nop
+    }
+
+    // @ Description
+    // Inverse of bonus_pack_, back to front so unpacked entries never overwrite unread packed ones.
+    scope bonus_unpack_: {
+        li      t0, remix_bonus_high_score_table + ((BONUS_ENTRIES - 1) * 5) // t0 = last packed entry
+        li      t1, remix_bonus_high_score_table + ((BONUS_ENTRIES - 1) * 6) // t1 = last unpacked entry
+        li      t2, BONUS_ENTRIES           // t2 = entries left
+
+        _loop:
+        lbu     t3, 0x0000(t0)
+        lbu     t4, 0x0001(t0)
+        lbu     t5, 0x0002(t0)
+        lbu     t6, 0x0003(t0)
+        lbu     t7, 0x0004(t0)
+        sll     t8, t3, 12
+        sll     t4, t4, 4
+        or      t8, t8, t4
+        srl     t4, t5, 4
+        or      t8, t8, t4                  // t8 = 20-bit targets value
+        andi    t5, t5, 0x000F
+        sll     t9, t5, 16
+        sll     t6, t6, 8
+        or      t9, t9, t6
+        or      t9, t9, t7                  // t9 = 20-bit platforms value
+
+        srl     t3, t8, 16                  // t3 = first byte, or 8 if count flag
+        sltiu   at, t3, 0x0008
+        beqzl   at, pc() + 8                // if count flag, first byte = 0x0A
+        lli     t3, 0x000A
+        sb      t3, 0x0000(t1)
+        srl     t3, t8, 8
+        sb      t3, 0x0001(t1)
+        sb      t8, 0x0002(t1)
+
+        srl     t3, t9, 16
+        sltiu   at, t3, 0x0008
+        beqzl   at, pc() + 8
+        lli     t3, 0x000A
+        sb      t3, 0x0003(t1)
+        srl     t3, t9, 8
+        sb      t3, 0x0004(t1)
+        sb      t9, 0x0005(t1)
+
+        addiu   t0, t0, -0x0005
+        addiu   t2, t2, -0x0001
+        bnez    t2, _loop
+        addiu   t1, t1, -0x0006
+        jr      ra
+        nop
+    }"""
+
 
 class CharacterAppender:
     def __init__(self, args):
@@ -327,7 +507,50 @@ class CharacterAppender:
         self._patch_character_asm()
         self._patch_stage_asm()
         self._patch_toggle_asm()
+        self._patch_bonus_sram_packing()
         self._patch_sram_revision()
+
+    def _patch_bonus_sram_packing(self):
+        """
+        Keep the save inside the cartridge's 32 KB SRAM.
+
+        Bonus.REMIX_BONUS_HIGH_SCORE_TABLE holds NUM_BONUS_STAGES x
+        NUM_CHARACTERS records of two 3-byte fields (targets, platforms), so it
+        grows ~198 bytes per character and pushes the save past 0x8000 with more
+        than one extra character. Data past 0x8000 is lost or written out of
+        bounds by the emulator, which crashed the game on launch.
+
+        Each field is either a count (first byte 0x0A) or a time <= 0x34BBF, so
+        it fits in 20 bits: bit 19 = count flag, bits 18-16 = first byte, bits
+        15-0 = last two bytes. The RAM table keeps its 6-byte layout (so none of
+        the code that reads it changes); only SRAM holds the 5-byte packing,
+        converted in place around SRAM.write_/read_.
+        """
+        def sub_once(path, pattern, repl):
+            with open(path, "r", encoding="utf-8") as f:
+                content = f.read()
+            content, n = re.subn(pattern, lambda _: repl, content, flags=re.M)
+            if n != 1:
+                print(f"ERROR: expected one match for {pattern!r} in {path}, found {n}.")
+                sys.exit(1)
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(content)
+
+        sub_once("src/Bonus.asm", r"^\s*REMIX_BONUS_HIGH_SCORE_TABLE_BLOCK:; SRAM\.block\(.*\)\s*$", BONUS_PACKED_BLOCK_ASM)
+        sub_once("src/SRAM.asm", r"^\s*jal\s+read_\s+// read\s*$",
+                 "        jal     Bonus.sram_read_packed_     // read (+EXTRA: unpacks the Remix Bonus table)")
+        sub_once("src/SRAM.asm", r"^\s*jal\s+write_\s+// write\s*$",
+                 "        jal     Bonus.sram_write_packed_    // write (+EXTRA: packs the Remix Bonus table)")
+
+        # Remix only prints a warning when SRAM overflows; fail the build instead.
+        with open("main.asm", "a", encoding="utf-8") as f:
+            f.write(
+                "\n// +EXTRA: save data must fit the cartridge's 32 KB SRAM\n"
+                'print "+EXTRA: SRAM uses ", SRAM.address, " of 32768 bytes\\n"\n'
+                "if SRAM.address > 0x8000 {\n"
+                '    error "Save data exceeds 32 KB SRAM: remove content via extra_content.yaml"\n'
+                "}\n"
+            )
 
     def _patch_sram_revision(self):
         """
