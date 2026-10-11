@@ -355,6 +355,12 @@ class CharacterAppender:
             sorted(self.stage_folders),
             sorted(self.audio_proc.midi_files_list),
         ]).encode("utf-8")
+        # The final Toggles.asm defines the SRAM block layout (gameplay and
+        # menu-music toggles included) and SRAM.asm still holds Remix's stock
+        # REVISION, so a change to either must also invalidate saves.
+        for path in ("src/Toggles.asm", "src/SRAM.asm"):
+            with open(path, "rb") as f:
+                selection += f.read()
 
         # REVISION is read with `lli`, a 16-bit immediate, so it must fit in
         # 0x0000-0xFFFF. Stay clear of stock values to avoid colliding with a
@@ -410,6 +416,26 @@ class CharacterAppender:
         main_content = main_content.replace(
             "roms/original.z64", f"{smashremix_path_relative}/roms/original_extra.z64")
 
+        # Stock Remix pads the ROM by writing one byte at 0x3E7FFFF. Once the
+        # MIDI bank runs past that address the pad overwrites a byte of
+        # MIDI/sample/FGM data, so only pad when the bank ends before it. Also
+        # fail the assemble if the final ROM reaches the size limit.
+        main_content, n = re.subn(
+            r'origin\s+0x3E7FFFF\s*\n\s*db\s+0x00',
+            "if MIDI.MIDI_BANK_END < 0x3E80000 {\n"
+            "    origin 0x3E7FFFF\n"
+            "    db 0x00\n"
+            "}\n"
+            f"if MIDI.MIDI_BANK_END >= 0x{ROM_SIZE_LIMIT:X} {{\n"
+            '    error "ROM reaches 64 MiB: remove content via extra_content.yaml"\n'
+            "}",
+            main_content,
+        )
+        if n != 1:
+            print("ERROR: stock ROM padding (origin 0x3E7FFFF) not found in main.asm; "
+                  "update _patch_src_paths to match the new Remix layout.")
+            sys.exit(1)
+
         with open("main.asm", 'w', encoding='utf-8') as f:
             f.write(main_content)
 
@@ -451,6 +477,8 @@ class CharacterAppender:
             filepath="main.asm",
             line=(
                 "\n// +EXTRA: guard against the ASM region colliding with MIDI_BANK\n"
+                'print "+EXTRA: ASM region uses ", custom_heap - 0x80400000, '
+                f'" of ", MIDI.MIDI_BANK - 0x{original_size:08X}, " bytes\\n"\n'
                 "if custom_heap > (0x80400000 + MIDI.MIDI_BANK - "
                 f"0x{original_size:08X}) {{\n"
                 '    error "ASM region overflows MIDI_BANK: reduce content or '
@@ -1598,8 +1626,8 @@ class CharacterAppender:
 
     def _patch_toggle_asm(self):
         # Toggles.asm
-        gameplay_toggles = [i.split(".")[0] for i in os.listdir(
-            "./extra_toggles/gameplay/") if i.endswith(".asm")]
+        gameplay_toggles = [i.split(".")[0] for i in sorted(os.listdir(
+            "./extra_toggles/gameplay/")) if i.endswith(".asm")]
 
         gameplay_toggles_strings = []
 
@@ -1675,7 +1703,7 @@ class CharacterAppender:
         )
 
         # Insert extra imports in main asm before characters start (before "// METAL MARIO")
-        extra_imports = os.listdir("./extra_imports/")
+        extra_imports = sorted(os.listdir("./extra_imports/"))
         extra_imports = [ei for ei in extra_imports if ei.endswith(".asm")]
 
         lineinfile.add_line_to_file(
@@ -1686,8 +1714,8 @@ class CharacterAppender:
         )
 
         # Add CSS debug menu toggles
-        css_toggles = [i for i in os.listdir(
-            "./extra_toggles/css/") if i.endswith(".asm")]
+        css_toggles = [i for i in sorted(os.listdir(
+            "./extra_toggles/css/")) if i.endswith(".asm")]
 
         css_toggle_scope_strings = []
 

@@ -61,7 +61,7 @@ class AudioProcessor:
                 )
 
                 midi_files = [
-                    f for f in os.listdir(f"extra_music/{_dir}/")
+                    f for f in sorted(os.listdir(f"extra_music/{_dir}/"))
                     if f.endswith(".yaml") and f != "config.yaml"
                 ]
 
