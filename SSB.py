@@ -576,12 +576,12 @@ class N64():
         # I wish there was a less horrifying way to do this...
         from array import array
         l = min(0x101000, len(self.rom))
-        m = array("L", self.rom[0x1000:l] + bytes(0x101000 - l))
+        m = array("I", self.rom[0x1000:l] + bytes(0x101000 - l))
         m.byteswap()
         # Zelda updates the second word a different way...
         if s == 0x91:
             from itertools import cycle
-            n = array("L", self.rom[0x750:0x850])
+            n = array("I", self.rom[0x750:0x850])
             n.byteswap()
             n = cycle(n)
         # Read each word as an integer.
