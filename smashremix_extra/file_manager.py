@@ -106,7 +106,8 @@ class FileManager:
     def add_file(
         path: str, name: str,
         internal_file_table_offset: int | str, internal_file_resource_offset: int | str,
-        reqlist_path: str = None, compression_level: int = 0, extend_reqlist: int = 0
+        reqlist_path: str = None, compression_level: int = 0, extend_reqlist: int = 0,
+        shareable: bool = False
     ) -> ImportFile:
         # Convert hex to int if necessary
         if isinstance(internal_file_table_offset, str):
@@ -126,10 +127,10 @@ class FileManager:
             extend_reqlist=extend_reqlist
         )
 
-        # Byte-identical files (e.g. Ken/Ryu animations) share one ROM file id.
-        # Only uncompressed files: main.bin and friends are registered first and
-        # patched afterwards, so their bytes here are not final.
-        key = FileManager._content_key(import_file) if compression_level == 0 else None
+        # shareable: the file is final now, so byte-identical copies (e.g. Ken/Ryu
+        # animations) can share one ROM file id. Not for main.bin and friends:
+        # they are registered first and patched afterwards.
+        key = FileManager._content_key(import_file) if shareable else None
         original = FileManager._by_content.get(key) if key else None
         if original is not None:
             import_file.id = original.id

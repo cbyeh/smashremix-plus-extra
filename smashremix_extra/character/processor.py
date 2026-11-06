@@ -555,7 +555,8 @@ class CharacterProcessor:
                 name=f"{character_folder}_anim_{animation.split('.')[0]}",
                 internal_file_table_offset=(offset*4),
                 internal_file_resource_offset=int("3FFFC", 16),
-                compression_level=0
+                compression_level=0,  # must stay raw: the animation loader crashes on vpk0 (tested 2026-11-05)
+                shareable=True
             )
 
         print(f"EXTRA FILES STR {extra_files_str}")

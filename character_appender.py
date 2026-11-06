@@ -20,6 +20,7 @@ from smashremix_extra.character.bio_overflow import apply_bio_overflow_patches, 
 from smashremix_extra.stage.processor import StageProcessor
 from smashremix_extra.extra_import.processor import ExtraImportProcessor, EXTRA_IMPORTS_ASM
 from smashremix_extra.audio.processor import AudioProcessor, ASM_HEADROOM
+from smashremix_extra.audio.fgm_dedup import dedup_fgm_samples
 from smashremix_extra.injector import ROMInjector, MODIFIED_FILES
 from smashremix_extra.injector.file_appender import pad_to_alignment
 from smashremix_extra.content_filter import filter_folders, load_content_config
@@ -1237,6 +1238,7 @@ class CharacterAppender:
             inserter=lineinfile.AfterLast(
                 r"^\s*(add_sound|add_fgm|add_sound_advanced)\(.*")
         )
+        dedup_fgm_samples("src/FGM.asm")
 
         # resultsscreen.asm
         lineinfile.add_line_to_file(

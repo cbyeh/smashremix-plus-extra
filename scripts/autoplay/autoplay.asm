@@ -14,6 +14,9 @@ scope Autoplay {
         sw      ra, 0x0014(sp)
         jal     0x80031FF4                  // original: osContGetReadData
         nop
+        li      t0, Toggles.entry_fps       // force the FPS counter on (1 = standard clock)
+        lli     t1, 1                       // so screenshots show lag
+        sw      t1, 0x0004(t0)
         li      t0, state_p1
         li      t1, 0x80045188              // t1 = raw pad, port 1
         jal     apply_
