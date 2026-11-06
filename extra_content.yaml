@@ -20,8 +20,10 @@
 # All 17 music packs together are only ~0.3 MB, so cutting music buys little.
 
 # experiment/all-characters: with remix_music: vanilla (Remix MIDIs aliased,
-# unused instrument samples dropped) these 16 fit with 13,800 bytes of ROM to
-# spare. Not included: CBKnuckles, MKnuckles, CBMKnuckles (~0.9-1.1 MiB each).
+# unused instrument samples dropped) these 16 fit in 65,600,076 bytes, 1,508,788
+# under 64 MiB (byte-identical animations are shared, e.g. Ken/Ryu and the MRGAW
+# variants). Not included: CBKnuckles, MKnuckles, CBMKnuckles (~0.9-1.1 MiB each,
+# less now that animations shared with Knuckles are stored once).
 characters:
   - Birdo
   - Cloud

@@ -16,8 +16,8 @@ Tree encoding:
   End   → 1  (when the parse stack has fewer than 2 entries)
   Empty tree → single 1 bit
 
-LZSS parameters (default, matching nvpktool / SSB64):
-  window   4096 bytes
+LZSS parameters:
+  window   65535 bytes (16-bit offsets; vanilla OneSample files use up to 16)
   min_len  2 bytes
   max_len  255 bytes
 
@@ -77,7 +77,7 @@ def _bit_width(n: int) -> int:
     return n.bit_length()
 
 
-def _lzss(data: bytes, window: int = 4096, min_len: int = 2) -> List[_Token]:
+def _lzss(data: bytes, window: int = 65535, min_len: int = 2) -> List[_Token]:
     """
     Greedy LZSS with a 3-gram hash table for candidate lookup.
 

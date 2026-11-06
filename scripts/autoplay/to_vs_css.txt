@@ -1,0 +1,34 @@
+# 13 START taps reach Mode Select; then VS MODE, VS Start (A confirms)
+4 START
+36 _
+4 START
+36 _
+4 START
+36 _
+4 START
+36 _
+4 START
+36 _
+4 START
+36 _
+4 START
+36 _
+4 START
+36 _
+4 START
+36 _
+4 START
+36 _
+4 START
+36 _
+4 START
+36 _
+4 START
+36 _
+30 _
+4 DD   # -> VS MODE
+30 _
+4 A
+60 _
+4 A    # VS Start
+120 _

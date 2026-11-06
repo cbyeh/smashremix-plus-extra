@@ -534,6 +534,7 @@ class CharacterAppender:
             injector.modify(file_id, path, tbl_off, res_off,
                             compression_level=level)
 
+        file_manager.FileManager.verify_aliases()
         for import_file in file_manager.FileManager.get_import_files():
             injector.add(
                 file_path=import_file.path,
@@ -891,7 +892,7 @@ class CharacterAppender:
         lineinfile.add_line_to_file(
             filepath="src/File.asm",
             line="\n".join(
-                [f"\tconstant {import_file.name.upper()}(0x{import_file.id:04X})" for import_file in file_manager.FileManager.get_import_files()]),
+                [f"\tconstant {import_file.name.upper()}(0x{import_file.id:04X})" for import_file in file_manager.FileManager.get_all_files()]),
             inserter=lineinfile.AfterLast(r"constant")
         )
 

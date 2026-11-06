@@ -1,0 +1,181 @@
+# 13 START taps reach Mode Select; then VS MODE, VS Start (A confirms)
+4 START
+36 _
+4 START
+36 _
+4 START
+36 _
+4 START
+36 _
+4 START
+36 _
+4 START
+36 _
+4 START
+36 _
+4 START
+36 _
+4 START
+36 _
+4 START
+36 _
+4 START
+36 _
+4 START
+36 _
+4 START
+36 _
+30 _
+4 DD   # -> VS MODE
+30 _
+4 A
+60 _
+4 A    # VS Start
+120 _
+# --- P1 Ken: cursor onto '+', R x14, A
+26 _ 0 80
+10 _ -80 0
+30 _
+4 R
+12 _
+4 R
+12 _
+4 R
+12 _
+4 R
+12 _
+4 R
+12 _
+4 R
+12 _
+4 R
+12 _
+4 R
+12 _
+4 R
+12 _
+4 R
+12 _
+4 R
+12 _
+4 R
+12 _
+4 R
+12 _
+4 R
+12 _
+4 A
+30 _
+164 _   # wait for P2 to pick
+4 START   # -> stage select
+90 _
+4 A   # pick the stage (repeat: the screen takes a moment to accept input)
+26 _
+4 A   # pick the stage (repeat: the screen takes a moment to accept input)
+26 _
+4 A   # pick the stage (repeat: the screen takes a moment to accept input)
+26 _
+4 A   # pick the stage (repeat: the screen takes a moment to accept input)
+26 _
+4 A   # pick the stage (repeat: the screen takes a moment to accept input)
+26 _
+4 A   # pick the stage (repeat: the screen takes a moment to accept input)
+26 _
+400 _
+# --- moveset
+# jab x3 @ 1934
+3 A
+8 _
+3 A
+8 _
+3 A
+50 _
+# forward tilt @ 2009
+4 A 45 0
+50 _
+# up tilt @ 2063
+4 A 0 45
+50 _
+# down tilt @ 2117
+10 _ 0 -80
+4 A 0 -80
+50 _
+# forward smash @ 2181
+4 A 80 0
+50 _
+# up smash @ 2235
+4 A 0 80
+50 _
+# down smash @ 2289
+4 A 0 -80
+50 _
+# dash attack @ 2343
+16 _ 80 0
+4 A 80 0
+50 _
+# turn back @ 2413
+4 _ -80 0
+50 _
+# neutral B @ 2467
+4 B
+50 _
+# side B @ 2521
+4 B 80 0
+50 _
+# up B @ 2575
+4 B 0 80
+50 _
+# down B @ 2629
+4 B 0 -80
+50 _
+# nair @ 2683
+3 CU
+8 _
+4 A
+50 _
+# fair @ 2748
+3 CU
+8 _
+4 A 80 0
+50 _
+# bair @ 2813
+3 CU
+8 _
+4 A -80 0
+50 _
+# uair @ 2878
+3 CU
+8 _
+4 A 0 80
+50 _
+# dair @ 2943
+3 CU
+8 _
+4 A 0 -80
+50 _
+# double jump @ 3008
+3 CU
+12 _
+3 CU
+50 _
+# grab + throw @ 3076
+4 Z
+10 _
+4 _ 80 0
+50 _
+# taunt @ 3144
+4 L
+50 _
+# shield @ 3198
+40 R
+50 _
+# roll @ 3288
+4 R
+4 R 80 0
+50 _
+# walk @ 3346
+40 _ 35 0
+50 _
+# crouch @ 3436
+30 _ 0 -80
+50 _

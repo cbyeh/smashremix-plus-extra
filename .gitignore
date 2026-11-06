@@ -65,3 +65,6 @@ __pycache__
 *.tar.gz
 *.tar
 *.rar
+# Autoplay test harness (generated)
+scripts/autoplay/autoplay_script.asm
+/main_autoplay.asm

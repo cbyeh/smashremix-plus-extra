@@ -83,6 +83,8 @@ class ImportFile:
 
 class FileManager:
     _import_files: ImportFile = []
+    _aliases: list = []  # (alias, original): duplicates sharing an earlier file's id
+    _by_content: dict = {}
     _last_file_id = None
 
     @staticmethod
@@ -106,8 +108,6 @@ class FileManager:
         internal_file_table_offset: int | str, internal_file_resource_offset: int | str,
         reqlist_path: str = None, compression_level: int = 0, extend_reqlist: int = 0
     ) -> ImportFile:
-        file_id = FileManager.get_new_file_id()
-
         # Convert hex to int if necessary
         if isinstance(internal_file_table_offset, str):
             internal_file_table_offset = int(internal_file_table_offset, 16)
@@ -116,7 +116,7 @@ class FileManager:
                 internal_file_resource_offset, 16)
 
         import_file = ImportFile(
-            id=file_id,
+            id=None,
             name=name,
             path=path,
             internal_file_table_offset=internal_file_table_offset,
@@ -125,13 +125,53 @@ class FileManager:
             compression_level=compression_level,
             extend_reqlist=extend_reqlist
         )
+
+        # Byte-identical files (e.g. Ken/Ryu animations) share one ROM file id.
+        # Only uncompressed files: main.bin and friends are registered first and
+        # patched afterwards, so their bytes here are not final.
+        key = FileManager._content_key(import_file) if compression_level == 0 else None
+        original = FileManager._by_content.get(key) if key else None
+        if original is not None:
+            import_file.id = original.id
+            FileManager._aliases.append((import_file, original))
+            logger.info(f"Deduplicated {path} -> 0x{original.id:04X} {original.name}")
+            return import_file
+
+        import_file.id = FileManager.get_new_file_id()
         FileManager._import_files.append(import_file)
+        if key:
+            FileManager._by_content[key] = import_file
         logger.info(f"Added file: {import_file}")
         return import_file
 
     @staticmethod
+    def _content_key(f: ImportFile) -> tuple:
+        with open(f.path, 'rb') as _f:
+            key = [_f.read(), f.internal_file_table_offset,
+                   f.internal_file_resource_offset, f.compression_level, f.extend_reqlist]
+        if f.reqlist_path and os.path.exists(f.reqlist_path):
+            with open(f.reqlist_path, 'rb') as _f:
+                key.append(_f.read())
+        return tuple(key)
+
+    @staticmethod
+    def verify_aliases():
+        """Fail the build if a file was changed after it was deduplicated."""
+        for alias, original in FileManager._aliases:
+            if FileManager._content_key(alias) != FileManager._content_key(original):
+                logger.error(f"{alias.path} was deduplicated onto {original.path} "
+                             f"(0x{original.id:04X}) but the files differ now")
+                exit(1)
+
+    @staticmethod
     def get_import_files() -> list[ImportFile]:
+        """Unique files to inject, in id order."""
         return FileManager._import_files
+
+    @staticmethod
+    def get_all_files() -> list[ImportFile]:
+        """Unique files plus aliases; every name needs a File.asm constant."""
+        return FileManager._import_files + [a for a, _ in FileManager._aliases]
 
     @staticmethod
     def gen_import_strings(relative_path: str = ""):

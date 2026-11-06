@@ -1,0 +1,148 @@
+772 _   # wait out the menus
+# --- P2 Ryu: cursor onto "+", R x21, A
+26 _ 0 80
+27 _ -80 0
+30 _
+4 R
+12 _
+4 R
+12 _
+4 R
+12 _
+4 R
+12 _
+4 R
+12 _
+4 R
+12 _
+4 R
+12 _
+4 R
+12 _
+4 R
+12 _
+4 R
+12 _
+4 R
+12 _
+4 R
+12 _
+4 R
+12 _
+4 R
+12 _
+4 R
+12 _
+4 R
+12 _
+4 R
+12 _
+4 R
+12 _
+4 R
+12 _
+4 R
+12 _
+4 R
+12 _
+4 DU   # D-pad up: SPECIAL variant (MRGAWPLUS)
+20 _
+4 A
+30 _
+693 _   # line up with P1
+# jab x3
+3 A
+8 _
+3 A
+8 _
+3 A
+50 _
+# forward tilt
+4 A -45 0
+50 _
+# up tilt
+4 A 0 45
+50 _
+# down tilt
+10 _ 0 -80
+4 A 0 -80
+50 _
+# forward smash
+4 A -80 0
+50 _
+# up smash
+4 A 0 80
+50 _
+# down smash
+4 A 0 -80
+50 _
+# dash attack
+16 _ -80 0
+4 A -80 0
+50 _
+# turn back
+4 _ 80 0
+50 _
+# neutral B
+4 B
+50 _
+# side B
+4 B -80 0
+50 _
+# up B
+4 B 0 80
+50 _
+# down B
+4 B 0 -80
+50 _
+# nair
+3 CU
+8 _
+4 A
+50 _
+# fair
+3 CU
+8 _
+4 A -80 0
+50 _
+# bair
+3 CU
+8 _
+4 A 80 0
+50 _
+# uair
+3 CU
+8 _
+4 A 0 80
+50 _
+# dair
+3 CU
+8 _
+4 A 0 -80
+50 _
+# double jump
+3 CU
+12 _
+3 CU
+50 _
+# grab + throw
+4 Z
+10 _
+4 _ -80 0
+50 _
+# taunt
+4 L
+50 _
+# shield
+40 R
+50 _
+# roll
+4 R
+4 R -80 0
+50 _
+# walk
+40 _ -35 0
+50 _
+# crouch
+30 _ 0 -80
+50 _
