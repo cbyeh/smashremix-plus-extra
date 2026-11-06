@@ -555,7 +555,7 @@ class CharacterProcessor:
                 name=f"{character_folder}_anim_{animation.split('.')[0]}",
                 internal_file_table_offset=(offset*4),
                 internal_file_resource_offset=int("3FFFC", 16),
-                compression_level=0,  # must stay raw: compressed animations hang the game at fighter spawn (tested 2026-11-06)
+                compression_level=0,  # raw: the game re-decodes on every action change, which drops frames (Ares, 2026-11-06)
                 shareable=True
             )
 
