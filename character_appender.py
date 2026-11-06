@@ -18,6 +18,7 @@ from smashremix_extra import file_manager
 from smashremix_extra.character.processor import CharacterProcessor
 from smashremix_extra.character.bio_overflow import apply_bio_overflow_patches, write_bio_overflow_asm
 from smashremix_extra.stage.processor import StageProcessor
+from smashremix_extra.extra_import.processor import ExtraImportProcessor, EXTRA_IMPORTS_ASM
 from smashremix_extra.audio.processor import AudioProcessor, ASM_HEADROOM
 from smashremix_extra.injector import ROMInjector, MODIFIED_FILES
 from smashremix_extra.injector.file_appender import pad_to_alignment
@@ -442,6 +443,7 @@ class CharacterAppender:
             stage_ids=self._collect_stage_ids(),
         )
         self.stage_proc = StageProcessor()
+        self.import_proc = ExtraImportProcessor()
 
         # Delete the build folder if it exists and create a new one
         if os.path.exists("build"):
@@ -495,6 +497,11 @@ class CharacterAppender:
 
         for stage_folder in self.stage_folders:
             self._process_stage(stage_folder)
+
+        # Extra imports' files and sounds (extra_imports/<Name>/config.yaml).
+        # Their sound ids continue after the stage sounds.
+        self.import_proc.LAST_SFX_ID = self.stage_proc.LAST_SFX_ID
+        self.import_proc.process_all()
 
     def _process_character(self, character_folder):
         self.char_proc.process(character_folder)
@@ -1033,8 +1040,9 @@ class CharacterAppender:
         # causing the malloc errors/instability with 4 players on the CSS at once.
         lineinfile.add_line_to_file(
             filepath="src/CharacterSelect.asm",
-            line="\t\t"+"\n\t\t".join(['slti    at, v0, dynamic_css.ACTIVE_HEAP_COUNT // at = 1 if v0 is still a real slot',
-                                       'beqz    at, _out_of_slots // if v0 ran past the real slots, stop and fall back instead of reading garbage']),
+            line="\t\t"+"\n\t\t".join([
+                'slti    at, v0, dynamic_css.ACTIVE_HEAP_COUNT // at = 1 if v0 is still a real slot',
+                'beqz    at, _out_of_slots // if v0 ran past the real slots, stop and fall back instead of reading garbage']),
             inserter=lineinfile.AfterFirst(
                 r'addiu\s+v0,\s*v0,\s*0x0001\s+// v0 = next heap slot')
         )
@@ -1218,12 +1226,13 @@ class CharacterAppender:
 
         self.audio_proc.patch_bgm_asm()
 
-        # FGM.asm - character sounds first, then stage sounds (matches the order
-        # LAST_SFX_ID was advanced, so the generated FGM ids stay correct).
+        # FGM.asm - character sounds, then stage sounds, then extra import sounds
+        # (matches the order LAST_SFX_ID was advanced, so the generated FGM ids stay correct).
         lineinfile.add_line_to_file(
             filepath="src/FGM.asm",
             line="\t"+"\n\t".join(
-                self.char_proc.sound_add_list + self.stage_proc.sound_add_list),
+                self.char_proc.sound_add_list + self.stage_proc.sound_add_list +
+                self.import_proc.sound_add_list),
             inserter=lineinfile.AfterLast(
                 r"^\s*(add_sound|add_fgm|add_sound_advanced)\(.*")
         )
@@ -1517,14 +1526,22 @@ class CharacterAppender:
         # SinglePlayer.asm
         lineinfile.add_line_to_file(
             filepath="src/SinglePlayer.asm",
-            line="\t"+"\n\t".join(self.char_proc.singleplayer_additions),
-            inserter=lineinfile.AfterLast(r'^\s*add_to_single_player\(.*')
+            line="\t\t// Extra characters\n\t\t"+
+            "\n\t\t".join(self.char_proc.character_1p_name_defs),
+            inserter=lineinfile.BeforeFirst(r'.*// Duo Teams')
         )
 
         lineinfile.add_line_to_file(
             filepath="src/SinglePlayer.asm",
-            line="\t"+"\n\t".join(self.char_proc.singleplayer_boss_name_defs),
-            inserter=lineinfile.AfterLast(r'.*constant DK_CREW\(0x0000D890\).*')
+            line="\n\t\t// Extra bosses\n\t\t"+
+            "\n\t\t".join(self.char_proc.character_1p_boss_name_defs),
+            inserter=lineinfile.BeforeFirst(r'.*// Duo Teams')
+        )
+
+        lineinfile.add_line_to_file(
+            filepath="src/SinglePlayer.asm",
+            line="\t"+"\n\t".join(self.char_proc.singleplayer_additions),
+            inserter=lineinfile.AfterLast(r'^\s*add_to_single_player\(.*')
         )
 
         lineinfile.add_line_to_file(
@@ -1535,6 +1552,9 @@ class CharacterAppender:
             inserter=lineinfile.BeforeLast(
                 r'.*// use normal width otherwise.*')
         )
+
+        add_to_scope("src/SinglePlayer.asm", "name_delay",
+                     ["// Extra characters"] + self.char_proc.character_1p_delay_defs)
 
         # SinglePlayerModes.asm
         lineinfile.add_line_to_file(
@@ -1563,11 +1583,22 @@ class CharacterAppender:
         add_to_scope("src/SinglePlayerModes.asm", "progress_icon",
                      self.char_proc.character_1p_icon_defs)
         add_to_scope("src/SinglePlayerModes.asm", "progress_icon",
-                     self.char_proc.character_boss_icon_defs)
+                     self.char_proc.character_1p_boss_icon_defs)
         add_to_label_on_empty("src/SinglePlayerModes.asm", "duo_array",
                               self.char_proc.character_1p_duo_parameter_defs)
         add_to_label_on_empty("src/SinglePlayerModes.asm", "team_array",
                               self.char_proc.character_1p_team_parameter_defs)
+
+        # SinglePlayer.asm - 1P clear images
+        if self.char_proc.ending_image_defs:
+            lineinfile.add_line_to_file(
+                filepath="src/SinglePlayer.asm",
+                line="\t" + "\n\t".join(self.char_proc.ending_image_defs),
+                inserter=lineinfile.AfterLast(
+                    r".*set_ending_image\(Character\.id\..*")
+            )
+
+        self.add_gallery_entries(self.char_proc.gallery_entries)
 
         # TwelveCharBattle.asm
         lineinfile.add_line_to_file(
@@ -1615,6 +1646,72 @@ class CharacterAppender:
                 line="\t\t"+"\n\t\t".join(char_fix["clear_asm"]),
                 inserter=lineinfile.BeforeLast(r".*_clear_kirby:*")
             )
+
+    def add_gallery_entries(self, entries):
+        """Appends characters' 1P clear images to the end of the Gallery."""
+        if not entries:
+            return
+
+        with open("src/Gallery.asm", 'r', encoding='utf-8') as f:
+            gallery = f.read()
+
+        size_match = re.search(r"constant id_table\.SIZE\((\d+)\)", gallery)
+        old_size = int(size_match.group(1))
+        new_size = old_size + len(entries)
+
+        gallery = gallery.replace(
+            size_match.group(0), f"constant id_table.SIZE({new_size})", 1)
+
+        # BGM arrays go after the last one (bgm_remix), before its OS.align
+        bgm_arrays = ""
+        for entry in entries:
+            bgm_arrays += f"\n    bgm_extra_{entry['character'].lower()}:\n"
+            bgm_arrays += f"    dh {len(entry['bgm'])}".ljust(44) + \
+                "// number of BGM\n"
+            bgm_arrays += "".join(f"    dh {bgm}\n" for bgm in entry['bgm'])
+        gallery = re.sub(
+            r"(\n    bgm_remix:\n(?:    dh .*\n)+)",
+            lambda m: m.group(1) + bgm_arrays, gallery, count=1)
+
+        gallery = re.sub(
+            r"(\n    dw bgm_remix.*\n)",
+            lambda m: m.group(1) + "".join(
+                f"    dw bgm_extra_{e['character'].lower()}".ljust(44) +
+                f"// {e['name']}\n" for e in entries),
+            gallery, count=1)
+
+        gallery = re.sub(
+            r"(\n    id_table:\n(?:.*\n)*?    db Character\.id\.BOSS\n)",
+            lambda m: m.group(1) + "".join(
+                f"    db Character.id.{e['character']}\n" for e in entries),
+            gallery, count=1)
+
+        with open("src/Gallery.asm", 'w', encoding='utf-8') as f:
+            f.write(gallery)
+
+        # Toggles.asm - names and index range for "View Gallery"
+        with open("src/Toggles.asm", 'r', encoding='utf-8') as f:
+            toggles = f.read()
+
+        toggles = re.sub(
+            r"(\n    string_table_gallery:\n(?:    dw .*\n)+)",
+            lambda m: m.group(1) + "".join(
+                f"    dw gallery_extra_{e['character'].lower()}\n" for e in entries),
+            toggles, count=1)
+
+        toggles = re.sub(
+            r'(\n    remix:; db "Remix", 0x00\n)',
+            lambda m: m.group(1) + "".join(
+                f"    gallery_extra_{e['character'].lower()}:; "
+                f"db \"{e['name']}\", 0x00\n" for e in entries),
+            toggles, count=1)
+
+        toggles = toggles.replace(
+            f"OS.FALSE, 0, {old_size - 1}, view_gallery,",
+            f"OS.FALSE, 0, {new_size - 1}, view_gallery,", 1)
+
+        with open("src/Toggles.asm", 'w', encoding='utf-8') as f:
+            f.write(toggles)
 
     def _patch_stage_asm(self):
         # Item.asm
@@ -2054,16 +2151,35 @@ class CharacterAppender:
             inserter=lineinfile.BeforeFirst(r"\/\/ KIRBY")
         )
 
-        # Insert extra imports in main asm before characters start (before "// METAL MARIO")
-        extra_imports = sorted(os.listdir("./extra_imports/"))
-        extra_imports = [ei for ei in extra_imports if ei.endswith(".asm")]
+        # Insert extra imports in main asm before characters start (before "// METAL MARIO").
+        # An import with a data folder (extra_imports/<Name>/config.yaml) gets its
+        # generated FILES/FGM scope included right before it.
+        extra_import_includes = [f'include "{EXTRA_IMPORTS_ASM}"']
+        for ei, ei_folder in ExtraImportProcessor.list_imports().items():
+            if ei in self.import_proc.generated:
+                extra_import_includes.append(
+                    f'include "build/extra_imports/{ei}/generated.asm"')
+            ei_path = os.path.join(ei_folder, f"{ei}.asm").replace("\\", "/")
+            extra_import_includes.append(f'include "{ei_path}"')
 
         lineinfile.add_line_to_file(
             filepath="main.asm",
-            line="// Extra imports\n"+"\n".join(
-                [f"include \"extra_imports/{ei}\"" for ei in extra_imports])+"\n",
+            line="// Extra imports\n"+"\n".join(extra_import_includes)+"\n",
             inserter=lineinfile.BeforeFirst(r"\/\/ METAL MARIO")
         )
+
+        # Load extra imports' files at the start of every battle
+        with open("src/Render.asm", 'r', encoding='utf-8') as f:
+            render = f.read()
+        for label in ["_1p", "_multiman", "_vs", "_training", "_bonus"]:
+            anchor = f"\n        {label}:\n"
+            if anchor not in render:
+                raise RuntimeError(f"Render.asm: battle setup label {label} not found")
+            render = render.replace(
+                anchor,
+                anchor + "        jal     ExtraImports.load_files_ // load extra imports' files\n        nop\n", 1)
+        with open("src/Render.asm", 'w', encoding='utf-8') as f:
+            f.write(render)
 
         # Add CSS debug menu toggles
         css_toggles = [i for i in sorted(os.listdir(
