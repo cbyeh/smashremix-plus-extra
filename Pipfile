@@ -6,9 +6,9 @@ name = "pypi"
 [packages]
 lineinfile = "*"
 pyyaml = "*"
-pillow = "*"
 pandas = "*"
 pyside6 = "*"
+pillow = "*"
 
 [dev-packages]
 
