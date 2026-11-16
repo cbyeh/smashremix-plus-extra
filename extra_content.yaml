@@ -19,12 +19,14 @@
 #   Kazuya 0.56  MetaKnight 0.75  Ryu 0.76  Cloud 0.88  YZelda 0.93  Terry 1.06
 # All 17 music packs together are only ~0.3 MB, so cutting music buys little.
 
+# YZelda was removed upstream (creator's request) and is no longer in this
+# list. The 7-character measurements above were taken with YZelda included and
+# have not been re-measured for the 6 below.
 characters:
   - Cloud
   - Kazuya
   - MetaKnight
   - Ryu
-  - YZelda
   - Ken
   - Terry
   # Terry owns FGC.asm (the `scope FGC` shared-mechanics file). Nothing outside
