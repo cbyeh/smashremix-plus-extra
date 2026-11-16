@@ -12,7 +12,10 @@ The stage's config.yaml carries a `collision:` LIST, one entry per line:
 `group:` is the yakumono id hazards.asm toggles; then exactly one of
 floor / ceil / lwall / rwall holding a flat x,y,x,y,... list (two points for a
 straight line, more for a polyline). `flags:` is optional - `drop_through`,
-`ledge`, and/or a surface-index int.
+`ledge`, and/or a surface-index int. `point_flags:` (optional, one int per point:
+0x8000 ledge, 0x4000 drop-through, low byte surface) sets them per point instead -
+the game reads a segment's flags from its first point, so one polyline can mix
+(vanilla stages do).
 
 `apply()` (run by the appender for a config.yaml `collision:` key) rebuilds the
 4 arrays MPGeometryData points at, APPENDS them to stage.bin, and repoints those
@@ -208,6 +211,8 @@ def to_spec(geo):
         names = flag_names(pts[0][2] if pts else 0)
         if names:
             entry["flags"] = names
+        if len({f for (_x, _y, f) in pts}) > 1:
+            entry["point_flags"] = [f for (_x, _y, f) in pts]
         out.append(entry)
     return out
 
@@ -262,8 +267,15 @@ def _parse(spec, group_count, label):
                     f"[-32768, 32767] - collision coords are 16-bit. "
                     f"Clamp far-off wall/diagonal endpoints (the blast zone is "
                     f"only a few thousand units out anyway).")
+        pf = e.get("point_flags")
+        if pf is not None:
+            if len(pf) != len(pts):
+                raise ValueError(f"{at}: point_flags needs one value per point ({len(pts)})")
+            flags = [int(v) & 0xFFFF for v in pf]
+        else:
+            flags = [_flags(e, at)] * len(pts)
         buckets.setdefault((gid, _LINE_TYPES.index(tk[0])), []).append(
-            (pts, _flags(e, at)))
+            (pts, flags))
     return buckets
 
 
@@ -296,8 +308,8 @@ def _build(spec, group_count, label):
             first = len(links)
             for pts, flags in buckets.get((gid, ti), []):
                 vfirst = len(vid)
-                for x, y in pts:
-                    vid.append(vertex(x, y, flags))
+                for (x, y), fl in zip(pts, flags):
+                    vid.append(vertex(x, y, fl))
                 links.append((vfirst, len(pts)))
             per_type.append((first, len(links) - first))
         line_info.append((gid, per_type))
@@ -397,6 +409,54 @@ def _w_s16(d, o, v):
 
 
 _MAPOBJ_REBIRTH = 0x20   # "rebirth platform" map object kind
+_MAPOBJ_ITEM = 0x04
+_MAX_ITEM_SPAWNS = 30    # itmanager.c item_mapobj_ids[30]: more = debug freeze
+
+
+def _mapobj_kind(k):
+    """config kind -> int: an int, a "0x.." string, or a MAPOBJ_KIND name."""
+    if isinstance(k, int):
+        return k
+    s = str(k).strip()
+    for kind, name in MAPOBJ_KIND.items():
+        if name.lower() == s.lower():
+            return kind
+    return int(s, 0)
+
+
+def set_map_objects(stage_path, chain_head, objs, *, label=""):
+    """Replace the stage's whole map-object list (MPMapObjData {u16 kind,
+    s16 x, s16 y}: player starts, item spawns, rebirth, demo / 1P positions...)
+    from the config.yaml `map_objects:` list of {kind, x, y} (`name` ignored, so
+    stage_attributes.yaml's dump copies straight back). The new array is
+    appended to stage.bin and geometry+0x18 repointed (its fixup-chain link
+    kept), count written to +0x14. header.bin untouched."""
+    label = f"{label}: " if label else ""
+    d = bytearray(open(stage_path, "rb").read())
+    geom = _find_geometry(d, _walk_chain(d, chain_head))
+    if geom is None:
+        raise ValueError(f"{label}could not locate MPGeometryData in stage.bin")
+    entries = [(_mapobj_kind(o["kind"]), int(o["x"]), int(o["y"])) for o in objs]
+    for kind, x, y in entries:
+        if not (0 <= kind <= 0xFFFF):
+            raise ValueError(f"{label}map object kind {kind} out of range")
+        if not (-32768 <= x <= 32767 and -32768 <= y <= 32767):
+            raise ValueError(f"{label}map object ({x}, {y}) outside s16")
+    n_items = sum(1 for k, _, _ in entries if k == _MAPOBJ_ITEM)
+    if n_items > _MAX_ITEM_SPAWNS:
+        raise ValueError(f"{label}{n_items} item spawns; the game allows at most "
+                         f"{_MAX_ITEM_SPAWNS}")
+    blob = b"".join(struct.pack(">Hhh", k, x, y) for k, x, y in entries)
+    while len(d) % 4:
+        d.append(0)
+    target = len(d)
+    if target // 4 > 0xFFFE:
+        raise ValueError(f"{label}stage.bin is too big to append map objects")
+    d += blob
+    _w16(d, geom + 0x18 + 2, target // 4)        # repoint, keep the chain link
+    _w16(d, geom + 0x14, len(entries))
+    open(stage_path, "wb").write(d)
+    return len(entries)
 
 
 def set_rebirth(stage_path, chain_head, x, y, *, label=""):

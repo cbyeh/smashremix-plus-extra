@@ -16,13 +16,42 @@ from smashremix_extra.character.gen_datascreen import (
     generate_special_image, generate_blank_image,
 )
 from smashremix_extra.character.gen_victory_image import generate_victory_images
+from smashremix_extra.character.gen_nameplate import (
+    generate_1p_name_image, generate_css_nameplate,
+    DEFAULT_1P_FONT, DEFAULT_CSS_FONT,
+)
 from smashremix_extra.file_appender import append_file, get_pointer, update_pointer
 from smashremix_extra.rom_util import get_attrib_offset
 from smashremix_extra.file_manager import FileManager
 from smashremix_extra.character.hurtbox import Hurtbox
+from smashremix_extra.character import hud_icons, series_logo
 from smashremix_extra.smashremix.kirbyshared import kirby_shared, KirbyJumpConfig
+from smashremix_extra.character.kirby_hat import kirby_hats
 from smashremix_extra.logger import logger
 from smashremix_extra import hex_util, asm_util
+
+
+def sound_loop_asm(aifc_path):
+    """FGM.asm line that makes the sound added right before it loop forever.
+
+    Emits an ALADPCMloop (start, end, count = -1, 16 zeroed state samples) and
+    points the sample's wavetable loop field at it (FGM.asm's SOUND_LOOP_PARAMS,
+    an offset from the CTL like the other wavetable pointers). The loop covers
+    the whole sample, so the state at the loop start is the zero state the
+    decoder starts from.
+    """
+    with open(aifc_path, "rb") as f:
+        data = f.read()
+    # SSND chunk size at 0xF4 (FGM.asm reads the same field); raw ADPCM data
+    # starts at 0x100 and is that size - 8. Each 9-byte frame = 16 samples.
+    ssnd_size = struct.unpack(">I", data[0xF4:0xF8])[0]
+    loop_end = ((ssnd_size - 8) // 9) * 16
+    return (
+        "evaluate loop_num(new_sample_count); "
+        "global evaluate SOUND_LOOP_PARAMS_{loop_num}(pc() - CTL_TABLE_PC); "
+        f"dw 0, 0x{loop_end:X}, 0xFFFFFFFF; fill 0x20 "
+        f"// loop: {os.path.basename(aifc_path)}"
+    )
 
 
 class CharacterProcessor:
@@ -173,6 +202,122 @@ class CharacterProcessor:
                 logger.warning(f"{name}: {line}")
         return f"{res.new_head:X}"
 
+    @staticmethod
+    def _process_series_logo(character_folder, config, original_path,
+                             output_path):
+        """Load the series logo mesh (series_logo.obj / .gltf / .glb, else a
+        GEE series_logo.bin) and generate the CSS series_logo.png and hud.png
+        from it when the folder has no hand-made one. Optional config keys:
+            series_logo:
+              css: false   # don't generate series_logo.png
+              hud: false   # don't generate hud.png
+        (`series_logo: false` turns both off). The CSS logo is also not
+        generated when definitions.series_logo_css picks an existing one.
+        Returns the triangles (None without a logo) and the hud.png path to
+        use (None: keep the base character's emblem)."""
+        cfg = config.get("series_logo", {})
+        if cfg is False:
+            cfg = {"css": False, "hud": False}
+        cfg = cfg or {}
+
+        try:
+            tris, source = series_logo.load_mesh(original_path)
+        except Exception as e:
+            logger.error(f"{character_folder}: can't read the series logo: {e}")
+            raise
+        if tris is not None:
+            logger.info(f"{character_folder}: series logo from {source} "
+                        f"({len(tris)} triangles)")
+            if source == "series_logo.bin":
+                logger.info(
+                    f"{character_folder}: series_logo.bin is a GEE export; "
+                    "`appender/scripts/series_logo.py convert` turns it into "
+                    "an editable series_logo.obj")
+
+        def generated(name, allowed, render):
+            """Hand-made PNG in the folder wins; else render one, or drop a
+            stale generated copy left in the build folder."""
+            if os.path.isfile(f"{original_path}/{name}"):
+                return f"{original_path}/{name}"
+            out = f"{output_path}/{name}"
+            if tris is not None and allowed:
+                render(tris).save(out)
+                logger.info(f"{character_folder}: generated {name} from "
+                            f"{source}")
+                return out
+            if os.path.isfile(out):
+                os.remove(out)
+            return None
+
+        generated(
+            "series_logo.png",
+            cfg.get("css", True) is not False and
+            "series_logo_css" not in config.get("definitions", {}),
+            series_logo.render_css)
+        hud_png = generated("hud.png", cfg.get("hud", True) is not False,
+                            series_logo.render_hud)
+        return tris, hud_png
+
+    def _process_hud_icons(self, config, original_path, output_path,
+                           num_costumes, hud_png=None):
+        """Replace the HUD emblem (hud.png) and stock icon
+        (stock_icon_<n>.png) in character.bin, rebuild the stock palette
+        array with one entry per costume when needed, and export the final
+        images into the build character folder.
+        Returns (HudIcons, array offset) for patch_main, or None."""
+        with open(f"{original_path}/main.bin", "rb") as f:
+            main = bytearray(f.read())
+        reqlist_path = f"{output_path}/main_reqlist.txt"
+        with open(reqlist_path, "r", encoding="utf-8") as f:
+            reqlist = f.readlines()
+
+        icons = hud_icons.HudIcons(
+            main, int(config["offsets"]["main"][0], 16),
+            int(config["offsets"]["main"][1], 16), reqlist)
+        if not icons.ok:
+            logger.warning(f"HUD icons skipped: {icons.reason}")
+            return None
+
+        char_path = f"{output_path}/character.bin"
+        with open(char_path, "rb") as f:
+            char = bytearray(f.read())
+        char_int = int(config["offsets"]["character"][0], 16)
+
+        if hud_png:
+            hud_icons.replace_emblem(icons, char, char_int, hud_png)
+
+        palettes = None
+        stock_paths = hud_icons.stock_icon_paths(original_path, num_costumes)
+        if stock_paths:
+            palettes = hud_icons.replace_stock_icon(
+                icons, char, char_int, stock_paths)
+
+        # Only rebuild the palette array when needed, so characters that
+        # already have one palette per costume keep their files untouched.
+        result = None
+        luts = icons.luts
+        if palettes is not None or num_costumes > len(icons.luts):
+            array, luts = hud_icons.build_palette_array(
+                icons, char, char_int, num_costumes, palettes)
+            with open(reqlist_path, "w", encoding="utf-8") as f:
+                f.writelines(hud_icons.insert_reqlist_entry(icons, reqlist))
+            result = (icons, array)
+
+        for lut, i, old in hud_icons.fix_transparent_colors(char, luts):
+            costumes = [c for c in range(num_costumes)
+                        if luts[c % len(luts)] == lut]
+            logger.info(
+                f"Stock icon: transparent color 0x{old:04X} -> 0x0000 "
+                f"(black) in palette 0x{lut:X} index {i}, "
+                f"costume(s) {costumes}")
+
+        with open(char_path, "wb") as f:
+            f.write(char)
+
+        hud_icons.extract(icons, char, output_path,
+                          num_costumes, luts)
+        return result
+
     def _get_bio_overflow_path(self, index: int) -> str:
         """Path for bio overflow file `index` (0-based), creating and
         registering it on first use."""
@@ -231,6 +376,10 @@ class CharacterProcessor:
             dirs_exist_ok=True
         )
 
+        # Kirby copy ability: kirby_hat/ (compiled to its own file) and kirby.asm
+        has_kirby_hat = kirby_hats.process_character(
+            character_folder, original_path, output_path)
+
         filename_to_id = {}
 
         # trim before the merge below reads the _hitbox footers it repoints
@@ -252,7 +401,8 @@ class CharacterProcessor:
             internal_file_resource_offset=config["offsets"]["main"][1],
             reqlist_path=f"{output_path}/main_reqlist.txt",
             compression_level=2,
-            extend_reqlist=config.get("extend_main_reqlist", 0)
+            # (+ the Kirby hat file: kirby_hats added it to the req list, its pointer comes last)
+            extend_reqlist=config.get("extend_main_reqlist", 0) + (1 if has_kirby_hat else 0)
         )
 
         character_file = FileManager.add_file(
@@ -434,6 +584,15 @@ class CharacterProcessor:
                     1+len(extra_files_to_add)+len(append_files)+1
                 shield_pose_is_external = True
 
+        # Series logo mesh -> generated CSS logo / HUD emblem PNGs
+        logo_tris, hud_png = self._process_series_logo(
+            character_folder, config, original_path, output_path)
+        # HUD emblem + stock icon (both live in character.bin). Must run
+        # before the reqlist compile: it adds a ${CHARACTER} entry.
+        hud_palette_array = self._process_hud_icons(
+            config, original_path, output_path,
+            config.get("num_costumes", 8), hud_png)
+
         # Compile reqlists
         reqlist_files = [_f for _f in os.listdir(
             f"./{output_path}/") if _f.endswith("reqlist.txt")]
@@ -589,7 +748,7 @@ class CharacterProcessor:
             # jab3, inhale copy
             f"OS.TRUE, "
             # inhale copy
-            f"OS.{config.get("definitions", {}).get("kirby_hat", "FALSE")}, "
+            f"OS.{'TRUE' if has_kirby_hat else config.get("definitions", {}).get("kirby_hat", "FALSE")}, "
             # btt_stage_id
             f"Stages.id.BTT_{config.get("definitions", {}).get("break_the_targets", "STG1")}, "
             # btp_stage_id
@@ -614,6 +773,46 @@ class CharacterProcessor:
         skin_number = config.get("num_costumes", 8)
         self.character_skins.append(skin_number)
 
+        # Generate nameplate textures from text for any character without a
+        # hand-made PNG. Optional `nameplate:` keys (`nameplate: false`
+        # turns generation off and falls back to the default textures):
+        #   css / singleplayer: text to render, or false to skip
+        #     (both default to results.name, then name)
+        #   boss: text for nameplate_boss.png (only generated if set)
+        #   css_font / singleplayer_font: font file paths
+        #   singleplayer_max_width: 1P names wider than this get squeezed
+        #     (default 120; CSS names always squeeze to fit the 72px plate)
+        nameplate_cfg = config.get("nameplate", {})
+        generated_1p_width = None
+        if nameplate_cfg is not False:
+            nameplate_cfg = nameplate_cfg or {}
+            default_text = config.get("results", {}).get(
+                "name", character_name)
+
+            css_text = nameplate_cfg.get("css", default_text)
+            if css_text and not os.path.isfile(
+                    f"{output_path}/nameplate.png"):
+                generate_css_nameplate(
+                    css_text, f"{output_path}/nameplate.png",
+                    nameplate_cfg.get("css_font", DEFAULT_CSS_FONT))
+
+            sp_text = nameplate_cfg.get("singleplayer", default_text)
+            if sp_text and not os.path.isfile(
+                    f"{output_path}/nameplate_singleplayer.png"):
+                generated_1p_width = generate_1p_name_image(
+                    sp_text, f"{output_path}/nameplate_singleplayer.png",
+                    nameplate_cfg.get("singleplayer_font", DEFAULT_1P_FONT),
+                    max_width=nameplate_cfg.get("singleplayer_max_width", 120))
+
+            # Boss nameplate is optional, so only made when text is given
+            boss_text = nameplate_cfg.get("boss")
+            if boss_text and not os.path.isfile(
+                    f"{output_path}/nameplate_boss.png"):
+                generate_1p_name_image(
+                    boss_text, f"{output_path}/nameplate_boss.png",
+                    nameplate_cfg.get("singleplayer_font", DEFAULT_1P_FONT),
+                    max_width=nameplate_cfg.get("singleplayer_max_width", 120))
+
         # Character select name texture
         name_texture = self.name_texture_default
 
@@ -636,7 +835,7 @@ class CharacterProcessor:
 
         # Create the binary file and write the hex digits
         with open(f'{output_path}/MODEL_REQ.req', 'wb') as binary_file:
-            for _ in range(req_list_count):
+            for _ in range(req_list_count + (1 if has_kirby_hat else 0)):    # (+ the Kirby hat's)
                 binary_file.write(char_hex_id_bytes)
 
         character_sound_add_list = {}
@@ -669,6 +868,7 @@ class CharacterProcessor:
                 type = "VOICE"
                 reverb = 0
                 length = -1
+                loop = False
 
                 sound_list = config.get("sounds", {})
 
@@ -682,7 +882,13 @@ class CharacterProcessor:
                         sample_rate = sound_settings.get("sample_rate", 16000)
                         type = sound_settings.get("fgm_type", "VOICE")
                         reverb = sound_settings.get("reverb", 0)
-                        length = sound_settings.get("length", -1)
+                        loop = bool(sound_settings.get("loop", False))
+                        # A looping sample keeps going until the FGM ends, so by
+                        # default make the FGM as long as possible (it's meant to
+                        # be stopped by the game: moveset command 0x3C sounds
+                        # stop on action change, or command 0x40 / FGM stop).
+                        length = sound_settings.get(
+                            "length", "0x7FFF" if loop else -1)
 
                 # If announcer sound, set reverb
                 if config.get("announcer_fgm"):
@@ -697,6 +903,9 @@ class CharacterProcessor:
                         s.rsplit('.', 1)[0]}, "
                     f"SAMPLE_RATE_{sample_rate}, FGM_TYPE_{type}, {reverb}, {length})"
                 )
+                if loop:
+                    self.sound_add_list.append(sound_loop_asm(
+                        f"./{output_path}sounds/{s}"))
 
         print(f"SOUND_ADD_LIST(character): {character_sound_add_list}")
 
@@ -774,6 +983,11 @@ class CharacterProcessor:
         # Use alternate width for character's 1P name texture if defined
         alt_name_width = sp_config.get(
             "alt_name_width", None)
+        # Generated 1P names are padded to a multiple of 8 wide; tell the
+        # game the visible width so it lays out like a vanilla name.
+        if alt_name_width is None and generated_1p_width is not None \
+                and generated_1p_width % 8:
+            alt_name_width = generated_1p_width
         alt_name_width_team = sp_config.get(
             "alt_name_width_team", alt_name_width)
         alt_name_width_giant = sp_config.get(
@@ -1078,44 +1292,33 @@ class CharacterProcessor:
                 f"\n\t\taddiu   a0, a0, 0x000C              // a0 = offset to \"WIN!\""
             )
 
-        # Check for 3D results/data series logo file and use if found
-        if os.path.exists(f"{output_path}/series_logo.bin"):
-            with open(f"{output_path}/series_logo.bin", 'rb') as logo_file:
-                logo = bytearray(logo_file.read())
+        # 3D results/data series logo: rebuilt from the logo mesh with the
+        # vanilla emblem material, so it always takes the player colors
+        if logo_tris is not None:
+            block, head, offs = series_logo.build_logo(logo_tris)
+            block_path = f"{output_path}/series_logo_3d.bin"
+            with open(block_path, "wb") as f:
+                f.write(block)
 
-            # Seems like Ness logo data always begins here once imported through GEE
-            logo_offset = 0x5C58
+            # display lists and vertices need 8-byte alignment
+            with open("scripts/0023.bin", "rb") as f:
+                base = len(f.read())
+            if base % 8:
+                with open("scripts/0023.bin", "ab") as f:
+                    f.write(b"\0" * (8 - base % 8))
+                base += 8 - base % 8
 
-            # Internal file table offset after GEE logo import (offset to first pointer)
-            pointer_offset = 0x624
+            append_file(block_path, 0, head,
+                        "scripts/0023.bin", 0x4, "scripts/0023.bin")
 
-            while pointer_offset < logo_offset:
-                next_pointer = get_pointer(logo, pointer_offset, "next")
-
-                if next_pointer > logo_offset:
-                    # got first pointer in character's logo data
-                    pointer_offset = next_pointer - logo_offset
-                    break
-
-                pointer_offset = next_pointer
-
-            with open(f"{output_path}/series_logo.bin", 'wb') as logo_file:
-                logo_file.write(logo[logo_offset:])
-
-            append_file(
-                f"{output_path}/series_logo.bin", logo_offset, pointer_offset,
-                "scripts/0023.bin", 0x4,
-                "scripts/0023.bin"
-            )
-
-            logo_length = os.path.getsize("scripts/0023.bin")
-
-            # Get series logo offsets
             self.character_series_models[f"{character_folder}"] = {
-                "offset": f"0x{(logo_length - 0x168):0X}",
-                "zoom":   f"0x{(logo_length - 0x60):0X}",
-                "color":  f"0x{(logo_length - 0x8):0X}"
+                "offset": f"0x{base + offs['dobjdesc']:0X}",
+                "zoom":   f"0x{base + offs['mobjsub']:0X}",
+                "color":  f"0x{base + offs['matanim']:0X}"
             }
+            logger.info(
+                f"{character_folder}: 3D series logo {offs['triangles']} "
+                f"triangles, {offs['vertices']} vertices, {len(block)} B")
 
             series_model = character_folder.upper()
 
@@ -1772,6 +1975,11 @@ class CharacterProcessor:
         attr_offset = int(get_attrib_offset(
             './extra_characters/'+character_folder+'/main.bin'), 16)
 
+        if hud_palette_array is not None:
+            hud_icons.patch_main(hud_palette_array[0], data,
+                                 int(config["offsets"]["main"][0], 16),
+                                 hud_palette_array[1])
+
         attr_sounds = {
             "death_fgm": 0xB4,
             "star_ko_fgm": 0xB8,
@@ -1993,8 +2201,10 @@ class CharacterProcessor:
                 # Found end of list
                 print(f"Last entry in the External file list: {pos:X}")
 
-                # Calculate how many new entries we need
-                num_new_entries = config.get("extend_main_reqlist", 0)
+                # Calculate how many new entries we need (+ the Kirby hat file's, last)
+                num_new_entries = config.get("extend_main_reqlist", 0) + (1 if has_kirby_hat else 0)
+                if has_kirby_hat:
+                    kirby_hats.main_slot(character_folder, len(data) + 4 * (num_new_entries - 1))
 
                 if num_new_entries == 0:
                     break
@@ -2085,10 +2295,20 @@ class CharacterProcessor:
                     f"Invalid SFX ID 0x{sfx_id} in config['sounds']. SFX IDs greater than or equal to 0x8000 are not allowed, as the highest bit is used in command D8 to indicate whether to play the original sound along with the new one instead of overriding it."
                 )
 
-        for moveset_file in moveset_files:
-            print(f"Compiling moveset file: {moveset_file}")
+        # Kirby's movesets for his copy of the character's neutral special (kirby_hat/moveset/*.bin,
+        # inserted as kirby_<name>): compiled like the character's own
+        kirby_moveset_dir = f"{original_path}/kirby_hat/moveset"
+        kirby_moveset_files = sorted(
+            mf for mf in (os.listdir(kirby_moveset_dir) if os.path.isdir(kirby_moveset_dir) else [])
+            if mf.lower().endswith(".bin"))
+        if kirby_moveset_files:
+            os.makedirs(f"{output_path}/kirby_hat/moveset", exist_ok=True)
 
-            with open(f"{original_path}/moveset/{moveset_file}", 'rb') as binary_file:
+        for moveset_folder, moveset_file in [("moveset", m) for m in moveset_files] + \
+                [("kirby_hat/moveset", m) for m in kirby_moveset_files]:
+            print(f"Compiling moveset file: {moveset_folder}/{moveset_file}")
+
+            with open(f"{original_path}/{moveset_folder}/{moveset_file}", 'rb') as binary_file:
                 data = bytearray(binary_file.read())
 
             pos = 0
@@ -2113,7 +2333,7 @@ class CharacterProcessor:
 
                         if sfx_int > self.LAST_REMIX_SFX_ID and command != "D8":
                             logger.error(
-                                f"Invalid SFX ID 0x{sfx} in {original_path}/moveset/{moveset_file}. "
+                                f"Invalid SFX ID 0x{sfx} in {original_path}/{moveset_folder}/{moveset_file}. "
                                 f"SFX IDs greater than the last Remix SFX ID (0x{self.LAST_REMIX_SFX_ID:04X}) must be mapped through config['sounds']. "
                                 f"Otherwise, a different character order would cause the SFX ID to point to a different sound than intended."
                             )
@@ -2130,7 +2350,7 @@ class CharacterProcessor:
                             trail} -> {character_sword_trail_add_list[trail]}")
                 pos += command_size
 
-            with open(f"{output_path}/moveset/{moveset_file}", 'wb') as binary_file:
+            with open(f"{output_path}/{moveset_folder}/{moveset_file}", 'wb') as binary_file:
                 binary_file.write(data)
 
         # Check main asm syntax
@@ -2165,6 +2385,10 @@ class CharacterProcessor:
                         )
                         main_compiled_file.write(
                             f'\tinsert {moveset_file},"moveset/{moveset_file}.bin"\n')
+                    for moveset_file in kirby_moveset_files:
+                        moveset_file = moveset_file.split(".")[0]
+                        main_compiled_file.write(
+                            f'\tinsert kirby_{moveset_file},"kirby_hat/moveset/{moveset_file}.bin"\n')
                     main_compiled_file.write("\n")
 
                     if len(config.get('sounds', {})) > 0:

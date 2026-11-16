@@ -13,6 +13,7 @@ from smashremix_extra.constants import SMASHREMIX_PATH as smashremix_path, VARIA
 from smashremix_extra.asm_util import add_to_scope, add_to_scope_on_empty, add_to_label, add_to_label_on_empty
 from smashremix_extra.rom_util import run_windows_command, extract_files
 from smashremix_extra.smashremix.kirbyshared import kirby_shared
+from smashremix_extra.character.kirby_hat import kirby_hats
 from smashremix_extra.logger import logger
 from smashremix_extra import file_manager
 from smashremix_extra.character.processor import CharacterProcessor
@@ -435,6 +436,8 @@ class CharacterAppender:
                 compression_level=import_file.compression_level,
             )
 
+        # Kirby's character file: pointers to the extra characters' hat files
+
         injector.save(on_progress=print)
 
     def copy_remix_src(self):
@@ -669,12 +672,14 @@ class CharacterAppender:
         with open("main.asm", 'w', encoding='utf-8') as f:
             f.write(main_content)
 
-        # Insert new character asm files before Kirby
+        # Insert new character asm files after Kirby / J Kirby: their Kirby actions (copy
+        # abilities) then come after Remix's (Kirby.asm tells his new actions from vanilla
+        # ones by id)
         lineinfile.add_line_to_file(
             filepath="main.asm",
             line="// Extra characters\n"+"\n".join(
                 [f'include "build/extra_characters/{name}/main.asm"' for name in self.char_folders]),
-            inserter=lineinfile.BeforeFirst(r"\/\/ KIRBY")
+            inserter=lineinfile.AfterFirst(r'include "src/JKirby/JKirby.asm"')
         )
 
         # Update internal name
@@ -856,8 +861,10 @@ class CharacterAppender:
             inserter=lineinfile.AfterLast(r".*ADD NEW CHARACTERS HERE")
         )
 
-        # # Sonic's alt_malloc_table entry sums his main model (0x16320) and Classic Sonic's model
-        # # (0x170F0); the 0x22260 term doesn't correspond to any known file and is dropped here.
+        # Do NOT shrink Sonic's alt_malloc_table entry. Loading Sonic on the CSS also loads Classic
+        # Sonic's main file (0xE38), which pulls in its real dependencies: Classic model (0xE39),
+        # SONIC_ENTRY (0xE45), SONIC_SHIELD_POSE (0xE22), spring files (0xDCF/0xDD0) and Fox files
+        # (0xD0/0xC9/0x13B/0x15A). That's 0x4D650 bytes in total, so the 0x22260 term is real.
         # lineinfile.add_line_to_file(
         #     filepath="src/CharacterSelect.asm",
         #     line=f'\tdw  0x16320 + 0x200 + 0x170F0 + 0x200 // 0x3B - SONIC',
@@ -875,19 +882,6 @@ class CharacterAppender:
             filepath="src/CharacterSelect.asm",
             line=f'\t\tconstant ACTIVE_HEAP_COUNT(5)',
             inserter=lineinfile.AfterLast(r'.*constant HEAP_SIZE\(.*\)')
-        )
-
-        # Change ram threshold
-        lineinfile.add_line_to_file(
-            filepath="src/CharacterSelect.asm",
-            line=f'\t\tlui t7, 0x8050 // t7 = ram threshold',
-            regexp=r'\s*lui\s*t7, 0x8078'
-        )
-
-        lineinfile.add_line_to_file(
-            filepath="src/CharacterSelect.asm",
-            line=f'\t\tlui t7, 0x8050 // t7 = ram threshold',
-            regexp=r'\s*lui\s*t7, 0x8078'
         )
 
         for _ in range(2):
@@ -967,6 +961,60 @@ class CharacterAppender:
             ]),
             inserter=lineinfile.BeforeLast(r".*// Custom heap Logic:")
         )
+
+        # increase_heap_ moves the main heap through: vanilla RAM -> expansion RAM -> leftover
+        # vanilla RAM. When the leftover RAM overflowed, it restarted expansion RAM from
+        # custom_heap_address, which is where the CSS preloads (Sonic first) live, so new files
+        # were loaded on top of them. Save where expansion RAM left off and resume from there.
+        # If neither region fits, the game now hangs instead of corrupting memory.
+        lineinfile.add_line_to_file(
+            filepath="src/CharacterSelect.asm",
+            line="\t"+"\n\t".join([
+                'dw 0x00000000 // initialized to 0, will be set to expansion expansion RAM end address',
+                'dw 0x00000000 // expansion RAM free address to resume from, set when we leave expansion RAM'
+            ]),
+            regexp=r'\s*dw 0x00000000 // initialized to 0, will be set to expansion expansion RAM end address'
+        )
+        lineinfile.add_line_to_file(
+            filepath="src/CharacterSelect.asm",
+            line="\t\t"+"\n\t\t".join([
+                'li      at, expansion_expansion_ram // at = expansion expansion RAM info',
+                'lw      at, 0x0008(at)              // at = expansion RAM resume address, 0 if first time',
+                'bnez    at, _resume_expansion       // if we were in expansion RAM before, continue from there',
+                'nop',
+                'OS.read_word(custom_heap_address, at) // at = free memory start',
+                '_resume_expansion:'
+            ]),
+            regexp=r'\s*OS\.read_word\(custom_heap_address, at\) // at = free memory start'
+        )
+        lineinfile.add_line_to_file(
+            filepath="src/CharacterSelect.asm",
+            line='\t\tsw      v1, 0x0008(t9)              // save expansion RAM free address to resume from later',
+            inserter=lineinfile.AfterFirst(
+                r'\s*li\s+t9, expansion_expansion_ram // t9 = expansion expansion RAM info')
+        )
+        lineinfile.add_line_to_file(
+            filepath="src/CharacterSelect.asm",
+            line='\t\tsw      r0, 0x0008(at)              // clear expansion RAM resume address',
+            inserter=lineinfile.AfterFirst(r'\s*sw\s+r0, 0x0000\(at\)\s+// clear start address')
+        )
+
+        # The "load normally or use a heap slot" checks (second CSS loading pass and
+        # dynamically_load_character_) only test the heap address against 0x80500000. Once the
+        # heap falls back to leftover vanilla RAM, that test fails and hovered characters load
+        # permanently, filling the last free memory. Also use slots once the heap has moved to
+        # expansion RAM (expansion_expansion_ram start is set at that point).
+        for inserter in (lineinfile.AfterFirst, lineinfile.AfterLast):
+            lineinfile.add_line_to_file(
+                filepath="src/CharacterSelect.asm",
+                line="\t\t"+"\n\t\t".join([
+                    'li      t7, expansion_expansion_ram // t7 = expansion expansion RAM info',
+                    'lw      t7, 0x0000(t7)              // t7 = leftover RAM start, set once heap moved to expansion RAM',
+                    'sltu    t7, r0, t7                  // t7 = 1 if heap already moved to expansion RAM',
+                    'or      t8, t8, t7                  // t8 = 1 if above threshold or heap already expanded'
+                ]),
+                inserter=inserter(r'\s*sltu\s+t8, t7, t8\s+// t1 = 1 if above threshold')
+            )
 
         idStrings = []
         offsetStrings = []
@@ -1321,6 +1369,9 @@ class CharacterAppender:
         # Inject patches related to Kirby clones
         kirby_shared.Inject()
 
+        # Kirby copy-ability hats / Kirby actions of extra characters
+        kirby_hats.patch_src()
+
         # Training.asm
         nameStrings = []
         dwStrings = []
@@ -1637,11 +1688,12 @@ class CharacterAppender:
 
             stages_per_page = num_rows * num_columns
 
-        # -1 for the Random stage on the last slot of each page
-        pages_needed = len(self.stage_folders) // (stages_per_page - 1) + 1
+        # Variants ("Stage/remix", ...) don't get their own SSS slot.
+        menu_stages = [s for s in self.stage_folders if "/" not in s]
 
-        if len(self.stage_folders) % (stages_per_page - 1) == 0:
-            pages_needed -= 1
+        # -1 for the Random stage on the last slot of each page
+        stages_per_extra_page = stages_per_page - 1
+        pages_needed = -(-len(menu_stages) // stages_per_extra_page)
 
         num_pages += pages_needed
 
@@ -1752,6 +1804,22 @@ class CharacterAppender:
                 f"{900+len(add_stage_strings)})"
             )
 
+        # Stage ids are stored as bytes all over the engine, and 0xFF is the
+        # "no variant" marker, so 0xFE is the last usable id. Anything above
+        # would be truncated by `db` and alias a vanilla stage.
+        if max_stage_id > 0xFE:
+            first_extra_id = 0xDE - self.RANDOM_STAGE_INDEX
+            max_extra = 0xFE - first_extra_id + 1
+            if first_extra_id <= 0xDE:
+                max_extra -= 1  # 0xDE is reserved for Random
+            raise Exception(
+                f"Too many extra stages: {len(self.stage_proc.stage_configs)} "
+                f"stages + variants need ids up to 0x{max_stage_id:X}, but stage "
+                f"ids are 1 byte (max 0xFE). At most {max_extra} extra stages "
+                f"(variants included) fit, so remove "
+                f"{len(self.stage_proc.stage_configs) - max_extra} of them "
+                f"(prefix a folder with '_' to skip it).")
+
         lineinfile.add_line_to_file(
             filepath="src/Stages.asm",
             line="\t\t"+"\n\t\t".join(stage_ids),
@@ -1776,24 +1844,14 @@ class CharacterAppender:
         # Assign stages to the menu slots
         # Any extra slots will be filled with the Random stage
         stage_slots = []
-        for i, stg in enumerate(self.stage_folders):
-            if "/" in stg:
-                continue
-
-            if i % (stages_per_page - 1) == 0:
-                stage_slots.append(
-                    f"// Extra page {i // (stages_per_page - 1) + 1}")
-
-            if i % (stages_per_page - 1) == 0 and i != 0:
-                stage_slots.append("db id.RANDOM")
-
-            stage_slots.append(f"db id.STAGE_{stg.upper()}")
-
-        stages_on_last_page = (
-            len([s for s in self.stage_folders if "/" not in s]) % (stages_per_page - 1))
-
-        if stages_on_last_page != 0:
-            for _ in range((stages_per_page) - stages_on_last_page):
+        for page in range(pages_needed):
+            chunk = menu_stages[page * stages_per_extra_page:
+                                (page + 1) * stages_per_extra_page]
+            stage_slots.append(f"// Extra page {page + 1}")
+            for stg in chunk:
+                stage_slots.append(f"db id.STAGE_{stg.upper()}")
+            # Pad the rest of the page (always at least the last slot) with Random
+            for _ in range(stages_per_page - len(chunk)):
                 stage_slots.append("db id.RANDOM")
 
         lineinfile.add_line_to_file(
