@@ -21,13 +21,14 @@
 
 # YZelda was removed upstream (creator's request) and is no longer in this
 # list. The 7-character measurements above were taken with YZelda included and
-# have not been re-measured for the 6 below.
+# have not been re-measured for the 7 below (Vesper is new).
 characters:
   - Cloud
   - Kazuya
   - MetaKnight
   - Ryu
   - Ken
+  - Vesper
   - Terry
   # Terry owns FGC.asm (the `scope FGC` shared-mechanics file). Nothing outside
   # extra_characters/Terry/ references that scope, and its many Kazuya blocks

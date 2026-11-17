@@ -1,0 +1,106 @@
+# [InternalFileTableOffsetBytes, InternalFileResourceOffsetBytes]
+offsets:
+  main: ["03C0", "0000"]
+  character: ["0004", "3FFFC"]
+
+definitions:
+  base_character: LINK
+  select_pose: 4
+
+shield_pose: "0x147"
+
+num_costumes: 6
+
+charge_smash_frames:
+  up: 8
+  forward: 6
+  down: 4
+
+results:
+  name: "Vesper"
+  name_scale: 1
+  name_x: 30
+  wins_x: 170
+
+12cb:
+  anim: "File.VESPER_ANIM_DOWNSTANDU"
+
+sounds:
+  "FFF0": vc_attack_dsmash
+  "FFF1": vc_attack_fsmash
+  "FFF2": vc_attack_usmash
+  "FFF3": vc_damagefly
+  "FFF4": vc_die
+  "FFF5": vc_dsp_finisher
+  "FFF6": vc_jump
+  "FFF7": vc_star_ko
+  "FFF8": vc_taunt
+  "FFF9": vc_tech
+  "FFFA": vc_usp
+  "FFFB": vc_usp2
+  "FFFC": blade_beam
+  "FFFD": blade_beam_slash
+  "FFFE": jump
+  "FFFF": sword_pierce
+  "FFE0": upBInitial
+  "FFE1": upBRise
+  "FFE2": cross_slash_hit
+  "FFE3": sword_finisher
+  "FFE4": victory1
+  "FFE5": chant
+  "FFE6": vc_stun
+  "FFE7": vc_sleep
+  "FFE8": vc_teeter
+  "FFE9": announcer
+  "FFEA": bike
+  "FFEB": heavygrab
+
+announcer_fgm: "FFE9"
+
+sounds_special:
+  "FFE5":
+    fgm_type: CHANT
+    length: 300
+  "FFE7":
+    fgm_type: SLEEP
+    length: "0x120"
+
+attributes:
+  death_fgm: "FFF4"
+  star_ko_fgm: "FFF7"
+  damaged_fgm: "FFF3"
+  heavy_lift_fgm: "FFEB"
+  attack_sfx_1: "FFF0"
+  attack_sfx_2: "FFF1"
+  attack_sfx_3: "FFF2"
+
+# Files 6, 7, 8, 9
+# [Filename (without .bin), InternalFileTableOffsetBytes, InternalFileResourceOffsetBytes]
+files:
+  [
+    ["beam_hitbox", "3FFFC", "0000"],
+    "0x0",
+    "0x0",
+    ["beam_graphic", "0058", "3FFFC"],
+  ]
+
+tag_team_preloads: ["beam_hitbox"]
+
+# sword trail definitions
+sword_trails:
+  # Default
+  "FF":
+    part: "0xF"
+    axis: "AXIS_X"
+    color1: "0x96BEEB00"
+    color2: "0xFFFFFF00"
+    start_pos: 32
+    end_pos: 400
+  # Pink
+  "FE":
+    part: "0xF"
+    axis: "AXIS_X"
+    color1: "0xFE50B200"
+    color2: "0xFE50B200"
+    start_pos: 32
+    end_pos: 400
